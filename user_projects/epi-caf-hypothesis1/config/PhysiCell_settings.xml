@@ -1,10 +1,10 @@
 <PhysiCell_settings version="devel-version">
 
     <domain>
-        <x_min>-800</x_min>
-        <x_max>800</x_max>
-        <y_min>-800</y_min>
-        <y_max>800</y_max>
+        <x_min>-1000</x_min>
+        <x_max>1000</x_max>
+        <y_min>-1000</y_min>
+        <y_max>1000</y_max>
         <z_min>-10</z_min>
         <z_max>10</z_max>
         <dx>20</dx>
@@ -14,7 +14,7 @@
     </domain>
 
     <overall>
-        <max_time units="min">7560.0</max_time>
+        <max_time units="min">10080.0</max_time>
         <time_units>min</time_units>
         <space_units>micron</space_units>
         <dt_diffusion units="min">0.01</dt_diffusion>
@@ -29,11 +29,11 @@
     <save>
         <folder>outputs/output_hypothesis1</folder>
         <full_data>
-            <interval units="min">5</interval>
+            <interval units="min">30</interval>
             <enable>true</enable>
         </full_data>
         <SVG>
-            <interval units="min">5</interval>
+            <interval units="min">30</interval>
             <enable>true</enable>
             <plot_substrate enabled="true" limits="false">
                 <substrate>ecm</substrate>
@@ -310,7 +310,7 @@
                     <detachment_rate units="1/min">0.0</detachment_rate>
                 </mechanics>
                 <motility>
-                    <speed units="micron/min">2</speed>
+                    <speed units="micron/min">0.249908679</speed>
                     <persistence_time units="min">10</persistence_time>
                     <migration_bias units="dimensionless">.5</migration_bias>
                     <options>
@@ -453,7 +453,7 @@
                     <detachment_rate units="1/min">0.0</detachment_rate>
                 </mechanics>
                 <motility>
-                    <speed units="micron/min">1</speed>
+                    <speed units="micron/min">8.03971290256818e-06</speed>
                     <persistence_time units="min">10</persistence_time>
                     <migration_bias units="dimensionless">.5</migration_bias>
                     <options>
@@ -483,7 +483,7 @@
                     </substrate>
                     <substrate name="ecm">
                         <secretion_rate units="1/min">0.1</secretion_rate>
-                        <secretion_target units="substrate density">1.0</secretion_target>
+                        <secretion_target units="substrate density">10</secretion_target>
                         <uptake_rate units="1/min">0.0</uptake_rate>
                         <net_export_rate units="total substrate/min">0.0</net_export_rate>
                     </substrate>
@@ -739,7 +739,7 @@
                     <detachment_rate units="1/min">0.0</detachment_rate>
                 </mechanics>
                 <motility>
-                    <speed units="micron/min">2</speed>
+                    <speed units="micron/min">0.249908679</speed>
                     <persistence_time units="min">10</persistence_time>
                     <migration_bias units="dimensionless">.5</migration_bias>
                     <options>
