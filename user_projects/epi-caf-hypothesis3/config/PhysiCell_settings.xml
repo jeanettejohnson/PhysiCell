@@ -1,10 +1,10 @@
 <PhysiCell_settings version="devel-version">
 
     <domain>
-        <x_min>-800</x_min>
-        <x_max>800</x_max>
-        <y_min>-800</y_min>
-        <y_max>800</y_max>
+        <x_min>-1000</x_min>
+        <x_max>1000</x_max>
+        <y_min>-1000</y_min>
+        <y_max>1000</y_max>
         <z_min>-10</z_min>
         <z_max>10</z_max>
         <dx>20</dx>
@@ -310,7 +310,7 @@
                     <detachment_rate units="1/min">0.0</detachment_rate>
                 </mechanics>
                 <motility>
-                    <speed units="micron/min">2</speed>
+                    <speed units="micron/min">2.0436</speed>
                     <persistence_time units="min">10</persistence_time>
                     <migration_bias units="dimensionless">.5</migration_bias>
                     <options>
@@ -739,7 +739,7 @@
                     <detachment_rate units="1/min">0.0</detachment_rate>
                 </mechanics>
                 <motility>
-                    <speed units="micron/min">2</speed>
+                    <speed units="micron/min">2.0436</speed>
                     <persistence_time units="min">10</persistence_time>
                     <migration_bias units="dimensionless">.5</migration_bias>
                     <options>
