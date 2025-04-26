@@ -213,22 +213,49 @@ class Cycle_Model
 	std::ostream& display( std::ostream& os ); // done 
 };
 
+// A hash function for pairs of ints as keys for extended_asymmetric_division_probabilities.
+// Should follow upper-triangular variant of Cantor set to prevent collisions.
+struct pair_hash {
+	
+	std::size_t operator () (const std::pair<int, int>& pair) const
+	{
+		int lower = std::min(pair.first, pair.second);
+		int upper = std::max(pair.first, pair.second);
+		int UT = upper * (upper + 1) / 2 + lower;
+		auto hash = std::hash<int>{}(UT);
+		return hash; 
+	}
+};
+
+struct equality_function {
+	bool operator()(const std::pair<int, int>& lhs, const std::pair<int, int>& rhs) const
+	{
+		return ((lhs.first == rhs.first && lhs.second == rhs.second) || (lhs.first == rhs.second && lhs.second == rhs.first));
+	}
+};
+
 class Asymmetric_Division
 {
-private:
 public:
-	// rates of asymmetric division into different cell types 
-	std::vector<double> asymmetric_division_probabilities; 
+	std::unordered_map<std::pair<int, int>, double, pair_hash, equality_function> asymmetric_division_probabilities;
 
-	// initialization
-	Asymmetric_Division(); // done 
-	void sync_to_cell_definitions(); // done 
+	void set_asymmetric_division_probability(std::pair<int, int> types, double probability);
+	void set_asymmetric_division_probability(int upper_triangular_index, double probability);
+	void set_asymmetric_division_probability(int type_1, int type_2, double probability);
+	void set_asymmetric_division_probability(std::string type_name_1, std::string type_name_2, double probability);
+
+	double asymmetric_division_probability(std::pair<int, int> types);
+	double asymmetric_division_probability(int upper_triangular_index);
+	double asymmetric_division_probability(int type_1, int type_2);
+	double asymmetric_division_probability(std::string type_name_1, std::string type_name_2);
 
 	double probabilities_total();
 
-	// ease of access 
-	double& asymmetric_division_probability( std::string type_name ); // done
+	std::pair<int, int> select_daughter_types(int type_1, int type_2);
 };
+
+std::pair<int, int> extended_asym_index_to_upper_triangle(int index);
+std::vector<std::pair<int, int>> initialize_pairs_vector(void);
 
 class Cycle
 {
