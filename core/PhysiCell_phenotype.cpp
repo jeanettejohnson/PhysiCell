@@ -1386,8 +1386,8 @@ double Asymmetric_Division::probabilities_total( void )
 double Asymmetric_Division::extended_probabilities_total( void )
 {
 	double total = 0.0; 
-	for( auto it = extended_asymmetric_division_probabilities.begin(); it != extended_asymmetric_division_probabilities.end(); it++ )
-	{ total += it->second; }
+	for (const auto& pair : extended_asymmetric_division_probabilities)
+	{ total += pair.second; }
 	return total; 
 }
 

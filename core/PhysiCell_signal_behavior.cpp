@@ -551,7 +551,7 @@ void setup_signal_behavior_dictionaries( void )
 	// DZ change extended asym div
 	for( int i=0; i < n ; i++ )
 	{
-		for( int j=i; j < n ; j++ )
+		for( int j=0; j < n ; j++ )
 		{
 			map_index++;
 			Cell_Definition* pCD1 = cell_definitions_by_type[i];

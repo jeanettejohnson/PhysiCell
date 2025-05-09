@@ -213,14 +213,17 @@ class Cycle_Model
 	std::ostream& display( std::ostream& os ); // done 
 };
 
-// DZ change extended asym div: needed a hash function for pairs of ints as keys for extended_asymmetric_division_probabilities
+// DZ change extended asym div: needed a hash function for pairs of ints as keys for extended_asymmetric_division_probabilities.
+// Should follow upper-triangular variant of Cantor set to prevent collisions.
 struct pair_hash {
-	template <class T1, class T2>
-	std::size_t operator () (const std::pair<T1,T2>& pair) const
+	
+	std::size_t operator () (const std::pair<int, int>& pair) const
 	{
-		auto hash1 = std::hash<T1>{}(pair.first);
-		auto hash2 = std::hash<T2>{}(pair.second);
-		return hash1 ^ hash2 + hash1 + hash2; 
+		int lower = std::min(pair.first, pair.second);
+		int upper = std::max(pair.first, pair.second);
+		int UT = upper * (upper + 1) / 2 + lower;
+		auto hash = std::hash<int>{}(UT);
+		return hash; 
 	}
 };
 
