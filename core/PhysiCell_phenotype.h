@@ -227,13 +227,20 @@ struct pair_hash {
 	}
 };
 
+struct equality_function {
+	bool operator()(const std::pair<int, int>& lhs, const std::pair<int, int>& rhs) const
+	{
+		return ((lhs.first == rhs.first && lhs.second == rhs.second) || (lhs.first == rhs.second && lhs.second == rhs.first));
+	}
+};
+
 class Asymmetric_Division
 {
 private:
 public:
 	// rates of asymmetric division into different cell types 
 	std::vector<double> asymmetric_division_probabilities; 
-	std::unordered_map<std::pair<int, int>, double, pair_hash> extended_asymmetric_division_probabilities;	// DZ change extended asym div
+	std::unordered_map<std::pair<int, int>, double, pair_hash, equality_function> extended_asymmetric_division_probabilities;	// DZ change extended asym div
 
 	// initialization
 	Asymmetric_Division(); // done 

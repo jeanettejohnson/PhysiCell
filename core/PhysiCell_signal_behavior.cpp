@@ -551,12 +551,14 @@ void setup_signal_behavior_dictionaries( void )
 	// DZ change extended asym div
 	for( int i=0; i < n ; i++ )
 	{
-		for( int j=0; j < n ; j++ )
+		for( int j=i; j < n ; j++ )
 		{
 			map_index++;
 			Cell_Definition* pCD1 = cell_definitions_by_type[i];
 			Cell_Definition* pCD2 = cell_definitions_by_type[j];
 			std::string temp =  "extended asymmetric division to " + pCD1->name + " and " + pCD2->name;
+			behavior_to_int[temp] = map_index;
+			std::string temp =  "extended asymmetric division to " + pCD2->name + " and " + pCD1->name;
 			behavior_to_int[temp] = map_index;
 			int_to_behavior[map_index] = temp;
 		}
