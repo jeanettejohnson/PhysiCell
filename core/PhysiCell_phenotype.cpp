@@ -1361,7 +1361,6 @@ double& Cell_Transformations::transformation_rate( std::string type_name )
 Asymmetric_Division::Asymmetric_Division()
 {
 	asymmetric_division_probabilities = {0.0};
-	// DZ extended_asymmetric_division_probabilities; do i need this?
 }
 
 void Asymmetric_Division::sync_to_cell_definitions()
@@ -1383,10 +1382,10 @@ double Asymmetric_Division::probabilities_total( void )
 	return total; 
 }
 
-double Asymmetric_Division::extended_probabilities_total( void )
+double Extended_Asymmetric_Division::probabilities_total( void )
 {
 	double total = 0.0; 
-	for (const auto& pair : extended_asymmetric_division_probabilities)
+	for (const auto& pair : asymmetric_division_probabilities)
 	{ total += pair.second; }
 	return total; 
 }
@@ -1400,12 +1399,12 @@ double& Asymmetric_Division::asymmetric_division_probability( std::string type_n
 }
 
 // DZ change extended asym div
-double& Asymmetric_Division::extended_asymmetric_division_probability( std::pair<std::string, std::string> type_names )
+double& Extended_Asymmetric_Division::asymmetric_division_probability( std::pair<std::string, std::string> type_names )
 {
 	extern std::unordered_map<std::string,int> cell_definition_indices_by_name; 
 	int n = cell_definition_indices_by_name[type_names.first]; 
 	int m = cell_definition_indices_by_name[type_names.second];
-	return extended_asymmetric_division_probabilities.at(std::make_pair(n, m)); 
+	return asymmetric_division_probabilities.at(std::make_pair(n, m)); 
 }
 
 // beta functionality in 1.10.3 

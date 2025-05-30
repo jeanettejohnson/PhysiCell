@@ -234,6 +234,36 @@ struct equality_function {
 	}
 };
 
+class Divisions
+{
+public:
+	virtual double probabilities_total() { return 0; }
+};
+
+class Asymmetric_Division: public Divisions
+{
+public:
+	std::vector<double> asymmetric_division_probabilities; 
+
+	Asymmetric_Division(); // done
+	void sync_to_cell_definitions(); // done 
+
+	double probabilities_total() override; // done
+
+	double& asymmetric_division_probability( std::string type_name );
+};
+
+class Extended_Asymmetric_Division: public Divisions
+{
+public:
+	std::unordered_map<std::pair<int, int>, double, pair_hash, equality_function> asymmetric_division_probabilities;	// DZ change extended asym div
+
+	double probabilities_total() override; // done
+
+	double& asymmetric_division_probability( std::pair<std::string, std::string> type_names );
+};
+
+/*
 class Asymmetric_Division
 {
 private:
@@ -253,6 +283,7 @@ public:
 	double& asymmetric_division_probability( std::string type_name ); // done
 	double& extended_asymmetric_division_probability( std::pair<std::string, std::string> type_names ); // DZ change extended asym div
 };
+*/
 
 class Cycle
 {
@@ -273,6 +304,7 @@ class Cycle
 	void sync_to_cycle_model( Cycle_Model& cm ); // done 
 
 	Asymmetric_Division asymmetric_division;
+	Extended_Asymmetric_Division extended_asymmetric_division; // DZ change extended asym div
 };
 
 class Death_Parameters

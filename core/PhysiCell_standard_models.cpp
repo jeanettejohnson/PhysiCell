@@ -1382,7 +1382,8 @@ void standard_asymmetric_division_function( Cell* pCell_parent, Cell* pCell_daug
 		double sym_div_prob = pCell_parent->phenotype.cycle.asymmetric_division.asymmetric_division_probabilities[pCell_parent->type] + 1.0 - total;
 		if (sym_div_prob < 0.0)
 		{ 
-			throw std::runtime_error("Error: Asymmetric division probabilities for " + pCD_parent->name + " sum to greater than 1.0 and cannot be normalized.");
+			std::cerr << "Error: Asymmetric division probabilities for " + pCD_parent->name + " sum to greater than 1.0 and cannot be normalized." << std::endl;
+			exit(-1);
 		}
 		pCell_parent->phenotype.cycle.asymmetric_division.asymmetric_division_probabilities[pCell_parent->type] = sym_div_prob;
 		pCell_daughter->phenotype.cycle.asymmetric_division.asymmetric_division_probabilities[pCell_daughter->type] = sym_div_prob;
@@ -1408,26 +1409,27 @@ void extended_asymmetric_division_function( Cell* pCell_parent, Cell* pCell_daug
 	std::string parent_name = pCell_parent->type_name;
 	int parent_type = pCell_parent->type;
 	Cell_Definition* pCD_parent = cell_definitions_by_name[parent_name];
-	double total = pCell_parent->phenotype.cycle.asymmetric_division.extended_probabilities_total();
+	double total = pCell_parent->phenotype.cycle.extended_asymmetric_division.probabilities_total();
 	if (total > 1.0)
 	{
-		double sym_div_prob = pCell_parent->phenotype.cycle.asymmetric_division.extended_asymmetric_division_probabilities.at(std::make_pair(parent_type, parent_type)) + 1.0 - total;
+		double sym_div_prob = pCell_parent->phenotype.cycle.extended_asymmetric_division.asymmetric_division_probabilities.at(std::make_pair(parent_type, parent_type)) + 1.0 - total;
 		if (sym_div_prob < 0.0)
 		{ 
-			throw std::runtime_error("Error: Asymmetric division probabilities for " + pCD_parent->name + " sum to greater than 1.0 and cannot be normalized.");
+			std::cerr << "Error: Asymmetric division probabilities for " + pCD_parent->name + " sum to greater than 1.0 and cannot be normalized." << std::endl;
+			exit(-1);
 		}
-		pCell_parent->phenotype.cycle.asymmetric_division.extended_asymmetric_division_probabilities[std::make_pair(parent_type, parent_type)] = sym_div_prob;
-		pCell_daughter->phenotype.cycle.asymmetric_division.extended_asymmetric_division_probabilities[std::make_pair(pCell_daughter->type, pCell_daughter->type)] = sym_div_prob;
+		pCell_parent->phenotype.cycle.extended_asymmetric_division.asymmetric_division_probabilities[std::make_pair(parent_type, parent_type)] = sym_div_prob;
+		pCell_daughter->phenotype.cycle.extended_asymmetric_division.asymmetric_division_probabilities[std::make_pair(pCell_daughter->type, pCell_daughter->type)] = sym_div_prob;
 	}
-	double r = UniformRandom();
-	for( auto it = pCell_parent->phenotype.cycle.asymmetric_division.extended_asymmetric_division_probabilities.begin(); it != pCell_parent->phenotype.cycle.asymmetric_division.extended_asymmetric_division_probabilities.end(); ++it )
+	double r = UniformRandom(); 
+	for( auto it = pCell_parent->phenotype.cycle.extended_asymmetric_division.asymmetric_division_probabilities.begin(); it != pCell_parent->phenotype.cycle.extended_asymmetric_division.asymmetric_division_probabilities.end(); ++it )
 	{
 		if( r <= it->second )
 		{
+			if (it->first.first != parent_type) // only convert if the parent is not already the correct type
+			{ pCell_daughter->convert_to_cell_definition( *cell_definitions_by_index[it->first.first] ); }
 			if (it->first.second != pCell_daughter->type) // only convert if the daughter is not already the correct type
-			{ pCell_daughter->convert_to_cell_definition( *cell_definitions_by_index[it->first.second] ); }
-			if (it->first.first != parent_type)
-			{ pCell_parent->convert_to_cell_definition( *cell_definitions_by_index[it->first.first] ); }
+			{ pCell_parent->convert_to_cell_definition( *cell_definitions_by_index[it->first.second] ); }
 			return;
 		}
 		r -= it->second;

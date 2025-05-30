@@ -2268,8 +2268,13 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 		node = node.child( "standard_asymmetric_division" );
 		if( node && node.attribute("enabled").as_bool() )
 		{
+			pugi::xml_node node_EAD = cd_node.child( "phenotype" ).child( "cycle" ).child( "extended_asymmetric_division" );
+			if( node_EAD && node_EAD.attribute("enabled").as_bool() )
+			{
+				std::cerr << "Error: Both standard and extended asymmetric division enabled for cell type " + pCD->name << std::endl;
+				exit(-1);
+			}
 			Asymmetric_Division *pAD = &(pCD->phenotype.cycle.asymmetric_division);
-
 			// asymmetric division rates
 			pugi::xml_node node_adp = node.child( "asymmetric_division_probability");
 			while (node_adp)
@@ -2304,15 +2309,17 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 			std::cout << std::endl;
 			pCD->functions.cell_division_function = standard_asymmetric_division_function;
 		}
+
 		node = cd_node.child( "phenotype" );
 		node = node.child( "cycle" );
 		node = node.child( "extended_asymmetric_division" );
 		if( node && node.attribute("enabled").as_bool() )
 		{
-			Asymmetric_Division *pAD = &(pCD->phenotype.cycle.asymmetric_division);
+			Extended_Asymmetric_Division *pEAD = &(pCD->phenotype.cycle.extended_asymmetric_division);
 
 			// asymmetric division rates
 			pugi::xml_node node_eadp = node.child( "extended_asymmetric_division_probability" );
+
 			while (node_eadp)
 			{
 				// get the name of the target cell type
@@ -2329,7 +2336,7 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 					int second_target_index = second_search->second;
 
 					double extended_asymmetric_division_probability = xml_get_my_double_value(node_eadp);
-					pAD->extended_asymmetric_division_probabilities[std::make_pair(first_target_index, second_target_index)] = extended_asymmetric_division_probability;
+					pEAD->asymmetric_division_probabilities[std::make_pair(first_target_index, second_target_index)] = extended_asymmetric_division_probability;
 				}
 				else
 				{
@@ -2341,8 +2348,8 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 				node_eadp = node_eadp.next_sibling("extended_asymmetric_division_probability");
 			}
 			std::cout << "Extended asymmetric division probabilities for " << pCD->name << ": ";
-			for (int i = 0; i < pAD->extended_asymmetric_division_probabilities.size(); i++)
-			for (auto it = pAD->extended_asymmetric_division_probabilities.begin(); it != pAD->extended_asymmetric_division_probabilities.end(); ++it)
+			for (int i = 0; i < pEAD->asymmetric_division_probabilities.size(); i++)
+			for (auto it = pEAD->asymmetric_division_probabilities.begin(); it != pEAD->asymmetric_division_probabilities.end(); ++it)
 			{
 				std::cout << it->first.first << " " << it->first.second << ": " << it->second << " ";
 			}
