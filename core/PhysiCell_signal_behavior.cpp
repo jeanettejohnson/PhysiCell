@@ -1498,18 +1498,23 @@ void set_behaviors( Cell* pCell , std::vector<double> parameters )
 }
 
 // DZ change for extended asym div: a function to convert the behavior index to upper triangular coords
+
+static std::vector< std::pair<int, int> > initialize_pairs_vector()
+{
+	std::vector< std::pair<int, int> > output; 
+	int n = cell_definition_indices_by_name.size(); 
+	for( int i = 0; i < n; i++ )
+	{
+		for( int j = i; j < n; j++ )
+		{ output.push_back( std::make_pair(i,j) ); }
+	}
+	return output; 
+}
+
 std::pair<int, int> extended_asym_index_to_upper_triangle(int index)
 {
-	int n = cell_definition_indices_by_name.size(); 
-	int i = 0; 
-	int j = 0; 
-	for( int k=0; k < n; k++ )
-	{
-		if( index >= n - k )
-		{ i++; index -= n - k; }
-		else
-		{ j = index + k; return std::make_pair(i, j); }
-	}
+	static std::vector< std::pair<int, int> > pairs_vector = initialize_pairs_vector();
+	return pairs_vector[index];
 }
 
 void set_single_behavior( Cell* pCell, int index , double parameter )
