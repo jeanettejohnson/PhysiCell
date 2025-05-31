@@ -1499,7 +1499,7 @@ void set_behaviors( Cell* pCell , std::vector<double> parameters )
 
 // DZ change for extended asym div: a function to convert the behavior index to upper triangular coords
 
-static std::vector< std::pair<int, int> > initialize_pairs_vector()
+std::vector< std::pair<int, int> > initialize_pairs_vector()
 {
 	std::vector< std::pair<int, int> > output; 
 	int n = cell_definition_indices_by_name.size(); 
@@ -1519,16 +1519,6 @@ std::pair<int, int> extended_asym_index_to_upper_triangle(int index)
 
 void set_single_behavior( Cell* pCell, int index , double parameter )
 {
-
-	/*	DZ change for extended asym div:	if we want to use vector of pairs indexing
-	std::vector< std::pair<int, int> > extended_asym_index_to_upper_triangle;
-	int n = cell_definition_indices_by_name.size();
-	for( int i = 0; i < n; i++ )
-	{
-		for( int j = i; j < n; j++ )
-		{ extended_asym_index_to_upper_triangle.push_back( std::make_pair(i,j) ); }
-	};
-	*/
 	static int m = microenvironment.number_of_densities(); 
 	static int n = cell_definition_indices_by_name.size(); 
 

@@ -1427,9 +1427,9 @@ void extended_asymmetric_division_function( Cell* pCell_parent, Cell* pCell_daug
 		if( r <= it->second )
 		{
 			if (it->first.first != parent_type) // only convert if the parent is not already the correct type
-			{ pCell_daughter->convert_to_cell_definition( *cell_definitions_by_index[it->first.first] ); }
+			{ pCell_parent->convert_to_cell_definition( *cell_definitions_by_index[it->first.first] ); }
 			if (it->first.second != pCell_daughter->type) // only convert if the daughter is not already the correct type
-			{ pCell_parent->convert_to_cell_definition( *cell_definitions_by_index[it->first.second] ); }
+			{ pCell_daughter->convert_to_cell_definition( *cell_definitions_by_index[it->first.second] ); }
 			return;
 		}
 		r -= it->second;
