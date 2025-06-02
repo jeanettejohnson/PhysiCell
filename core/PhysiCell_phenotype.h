@@ -213,22 +213,77 @@ class Cycle_Model
 	std::ostream& display( std::ostream& os ); // done 
 };
 
+// DZ change extended asym div: needed a hash function for pairs of ints as keys for extended_asymmetric_division_probabilities.
+// Should follow upper-triangular variant of Cantor set to prevent collisions.
+struct pair_hash {
+	
+	std::size_t operator () (const std::pair<int, int>& pair) const
+	{
+		int lower = std::min(pair.first, pair.second);
+		int upper = std::max(pair.first, pair.second);
+		int UT = upper * (upper + 1) / 2 + lower;
+		auto hash = std::hash<int>{}(UT);
+		return hash; 
+	}
+};
+
+struct equality_function {
+	bool operator()(const std::pair<int, int>& lhs, const std::pair<int, int>& rhs) const
+	{
+		return ((lhs.first == rhs.first && lhs.second == rhs.second) || (lhs.first == rhs.second && lhs.second == rhs.first));
+	}
+};
+
+class Divisions
+{
+public:
+	virtual double probabilities_total() { return 0; }
+};
+
+class Asymmetric_Division: public Divisions
+{
+public:
+	std::vector<double> asymmetric_division_probabilities; 
+
+	Asymmetric_Division(); // done
+	void sync_to_cell_definitions(); // done 
+
+	double probabilities_total() override; // done
+
+	double& asymmetric_division_probability( std::string type_name );
+};
+
+class Extended_Asymmetric_Division: public Divisions
+{
+public:
+	std::unordered_map<std::pair<int, int>, double, pair_hash, equality_function> asymmetric_division_probabilities;	// DZ change extended asym div
+
+	double probabilities_total() override; // done
+
+	double& asymmetric_division_probability( std::pair<std::string, std::string> type_names );
+};
+
+/*
 class Asymmetric_Division
 {
 private:
 public:
 	// rates of asymmetric division into different cell types 
 	std::vector<double> asymmetric_division_probabilities; 
+	std::unordered_map<std::pair<int, int>, double, pair_hash, equality_function> extended_asymmetric_division_probabilities;	// DZ change extended asym div
 
 	// initialization
 	Asymmetric_Division(); // done 
 	void sync_to_cell_definitions(); // done 
 
 	double probabilities_total();
+	double extended_probabilities_total(); // DZ change extended asym div
 
 	// ease of access 
 	double& asymmetric_division_probability( std::string type_name ); // done
+	double& extended_asymmetric_division_probability( std::pair<std::string, std::string> type_names ); // DZ change extended asym div
 };
+*/
 
 class Cycle
 {
@@ -249,6 +304,7 @@ class Cycle
 	void sync_to_cycle_model( Cycle_Model& cm ); // done 
 
 	Asymmetric_Division asymmetric_division;
+	Extended_Asymmetric_Division extended_asymmetric_division; // DZ change extended asym div
 };
 
 class Death_Parameters

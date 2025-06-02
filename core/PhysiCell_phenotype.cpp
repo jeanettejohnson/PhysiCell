@@ -1397,12 +1397,29 @@ double Asymmetric_Division::probabilities_total( void )
 	return total; 
 }
 
+double Extended_Asymmetric_Division::probabilities_total( void )
+{
+	double total = 0.0; 
+	for (const auto& pair : asymmetric_division_probabilities)
+	{ total += pair.second; }
+	return total; 
+}
+
 // ease of access
 double& Asymmetric_Division::asymmetric_division_probability( std::string type_name )
 {
 	extern std::unordered_map<std::string,int> cell_definition_indices_by_name; 
 	int n = cell_definition_indices_by_name[type_name]; 
 	return asymmetric_division_probabilities[n]; 
+}
+
+// DZ change extended asym div
+double& Extended_Asymmetric_Division::asymmetric_division_probability( std::pair<std::string, std::string> type_names )
+{
+	extern std::unordered_map<std::string,int> cell_definition_indices_by_name; 
+	int n = cell_definition_indices_by_name[type_names.first]; 
+	int m = cell_definition_indices_by_name[type_names.second];
+	return asymmetric_division_probabilities.at(std::make_pair(n, m)); 
 }
 
 // beta functionality in 1.10.3 

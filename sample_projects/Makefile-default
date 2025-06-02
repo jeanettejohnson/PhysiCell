@@ -207,6 +207,7 @@ mechano-sample:
 	cp ./sample_projects/mechano/main.cpp ./main.cpp 
 	cp Makefile Makefile-backup
 	cp ./sample_projects/mechano/Makefile .
+	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml 
 	cp ./sample_projects/mechano/config/* ./config/
 
 rules-sample:
@@ -260,6 +261,7 @@ episode-sample:
 	cp ./sample_projects/episode/main.cpp ./main.cpp
 	cp Makefile Makefile-backup
 	cp ./sample_projects/episode/Makefile .
+	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml 
 	cp -r ./sample_projects/episode/config/* ./config
 
 dirichlet-from-file-sample:
@@ -270,6 +272,15 @@ dirichlet-from-file-sample:
 	cp ./sample_projects/dirichlet_from_file/Makefile .
 	cp -r ./sample_projects/dirichlet_from_file/config/* ./config 
 	
+extended-asym-div-sample:
+	cp -r ./sample_projects/extended_asym_div/custom_modules/* ./custom_modules/
+	touch main.cpp && cp main.cpp main-backup.cpp
+	cp ./sample_projects/extended_asym_div/main.cpp ./main.cpp 
+	cp Makefile Makefile-backup
+	cp ./sample_projects/extended_asym_div/Makefile .
+	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml 
+	cp -r ./sample_projects/extended_asym_div/config/* ./config/
+
 # ---- intracellular projects 
 ode-energy-sample:
 	cp ./sample_projects_intracellular/ode/ode_energy/custom_modules/* ./custom_modules/
