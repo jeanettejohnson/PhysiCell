@@ -33,7 +33,7 @@
 #                                                                             #
 # BSD 3-Clause License (see https://opensource.org/licenses/BSD-3-Clause)     #
 #                                                                             #
-# Copyright (c) 2015-2025, Paul Macklin and the PhysiCell Project             #
+# Copyright (c) 2015-2021, Paul Macklin and the PhysiCell Project             #
 # All rights reserved.                                                        #
 #                                                                             #
 # Redistribution and use in source and binary forms, with or without          #
@@ -65,53 +65,28 @@
 ###############################################################################
 */
 
-#ifndef __PhysiCell_utilities_h__
-#define __PhysiCell_utilities_h__
+#include "../core/PhysiCell.h"
+#include "../modules/PhysiCell_standard_modules.h" 
 
-#include <iostream>
-#include <ctime>
-#include <cmath>
-#include <string>
-#include <vector>
-#include <chrono>
-#include <random>
+using namespace BioFVM; 
+using namespace PhysiCell;
 
-#include <omp.h> 
+// setup functions to help us along 
 
-namespace PhysiCell{
+void create_cell_types( void );
+void setup_tissue( void ); 
 
+// set up the BioFVM microenvironment 
+void setup_microenvironment( void ); 
 
-	extern std::vector<unsigned int> physicell_random_seeds; 
+// custom pathology coloring function 
 
-void setup_rng( void );
-void SeedRandom( unsigned int input );
-void SeedRandom( void );
+std::vector<std::string> my_coloring_function( Cell* );
 
-double UniformRandom( void );
+// custom functions can go here 
 
-int UniformInt( void );
-double NormalRandom( double mean, double standard_deviation );
-double LogNormalRandom( double mean, double standard_deviation );
+void phenotype_function( Cell* pCell, Phenotype& phenotype, double dt );
+void custom_function( Cell* pCell, Phenotype& phenotype , double dt );
 
-std::vector<double> UniformOnUnitSphere( void ); 
-std::vector<double> UniformOnUnitCircle( void ); 
+void contact_function( Cell* pMe, Phenotype& phenoMe , Cell* pOther, Phenotype& phenoOther , double dt ); 
 
-std::vector<double> LegacyRandomOnUnitSphere( void ); 
-
-
-double dist_squared(std::vector<double> p1, std::vector<double> p2);
-double dist(std::vector<double> p1, std::vector<double> p2);
-
-std::string get_PhysiCell_version( void ); 
-void get_PhysiCell_version( std::string& pString ); 
-
-void display_citations( std::ostream& os ); 
-void display_citations( void ); 
-void add_software_citation( std::string name , std::string version, std::string DOI, std::string URL ); 
-
-int choose_event( std::vector<double>& probabilities ); 
-
-void copy_file_to_output(const std::string &filename, const std::string &default_basename = "");
-};
-
-#endif

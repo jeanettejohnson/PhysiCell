@@ -125,7 +125,10 @@ bool load_PhysiCell_config_file( void )
 
 	create_output_directory( PhysiCell_settings.folder );
 
-	return true; 	
+	std::string default_basename = "PhysiCell_settings.xml";
+	copy_file_to_output(argument_parser.path_to_config_file, default_basename); // copy the settings file to the output folder
+
+	return true;
 }
 
 PhysiCell_Settings::PhysiCell_Settings()
@@ -971,7 +974,7 @@ bool setup_microenvironment_from_XML( pugi::xml_node root_node )
 		else
 		{
 			std::cerr << "Error: Initial condition file type for substrates not recognized. Please use .mat or .csv file." << std::endl;
-			exit(EXIT_FAILURE);
+			exit(-1);
 		}
 		default_microenvironment_options.initial_condition_file = argument_parser.path_to_ic_substrate_file;
 	}
@@ -990,7 +993,8 @@ bool setup_microenvironment_from_XML( pugi::xml_node root_node )
 	}
 	if (default_microenvironment_options.initial_condition_from_file_enabled)
 	{
-		copy_file_to_output(default_microenvironment_options.initial_condition_file);
+		std::string default_basename_substrates = default_microenvironment_options.initial_condition_file_type == "matlab" ? "substrates.mat" : "substrates.csv";
+		copy_file_to_output(default_microenvironment_options.initial_condition_file, default_basename_substrates);
 	}
 
 	if (argument_parser.path_to_ic_dc_file != "")
@@ -1008,7 +1012,7 @@ bool setup_microenvironment_from_XML( pugi::xml_node root_node )
 		else
 		{
 			std::cerr << "Error: Dirichlet condition file type for substrates not recognized. Please use .mat or .csv file." << std::endl;
-			exit(EXIT_FAILURE);
+			exit(-1);
 		}
 		default_microenvironment_options.dirichlet_condition_file = argument_parser.path_to_ic_dc_file;
 	}
@@ -1029,6 +1033,7 @@ bool setup_microenvironment_from_XML( pugi::xml_node root_node )
 	}
 	if (default_microenvironment_options.dirichlet_condition_from_file_enabled)
 	{
+		std::string default_basename_dcs = default_microenvironment_options.dirichlet_condition_file_type == "matlab" ? "dcs.mat" : "dcs.csv";
 		copy_file_to_output(default_microenvironment_options.dirichlet_condition_file);
 	}
 	return true;  
