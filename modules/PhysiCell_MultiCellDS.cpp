@@ -257,6 +257,12 @@ void add_PhysiCell_cells_to_open_xml_pugi_v2( pugi::xml_document& xml_dom, std::
 		// ID 					<label index="0" size="1">ID</label>
 		add_variable_to_labels( data_names,data_units,data_start_indices,data_sizes, 
 			"ID" , "none" , 1 ) ; 
+		//Generation for lineage tracking from rheiland
+		add_variable_to_labels( data_names,data_units,data_start_indices,data_sizes, 
+			"generation" , "none" , 1 ) ; 
+		//ParentID for lineage tracking from rheiland
+		add_variable_to_labels( data_names,data_units,data_start_indices,data_sizes, 
+			"parentID" , "none" , 1 ) ;
 
 		//					<label index="1" size="3">position</label>
 		add_variable_to_labels( data_names,data_units,data_start_indices,data_sizes, 
@@ -791,6 +797,12 @@ void add_PhysiCell_cells_to_open_xml_pugi_v2( pugi::xml_document& xml_dom, std::
 
 		// name = "ID"; 
 		dTemp = (double) pCell->ID;
+		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp );
+		// name = "generation"; lineage tracking from rheiland
+		dTemp = (double) pCell->generation;
+		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
+        // name = "parentID"; lineage tracking from rheiland
+		dTemp = (double) pCell->parentID;
 		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
 		// name = "position";    NOTE very different syntax for writing vectors!
         std::fwrite( pCell->position.data() , sizeof(double) , 3 , fp );
