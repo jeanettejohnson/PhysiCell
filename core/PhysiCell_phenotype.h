@@ -455,8 +455,9 @@ class Motility
 
 class Secretion
 {
- private:
- public:
+public:
+	typedef void (Secretion::*Advancer)(Basic_Agent *pCell, Phenotype &phenotype, double dt);
+
 	Microenvironment* pMicroenvironment; 
 	
 	std::vector<double> secretion_rates; 
@@ -470,9 +471,18 @@ class Secretion
 
 	// use this to properly size the secretion parameters to the microenvironment in 
 	// pMicroenvironment
-	void sync_to_current_microenvironment( void ); // done 
-	
-	void advance( Basic_Agent* pCell, Phenotype& phenotype , double dt ); 
+	void sync_to_current_microenvironment( void ); // done
+
+	bool prepare_advancer( Basic_Agent* pCell, Phenotype& phenotype, double dt);
+	void set_advancer(Advancer ptr) {
+        advancer = ptr;
+    }
+	void advance(Basic_Agent *pCell, Phenotype &phenotype, double dt)
+	{
+		(this->*advancer)(pCell, phenotype, dt);
+	}
+	void default_advancer( Basic_Agent* pCell, Phenotype& phenotype , double dt ); 
+	void transmembrane_diffusion_advancer( Basic_Agent* pCell, Phenotype& phenotype , double dt ); 
 	
 	// use this to properly size the secretion parameters to the microenvironment 
 	void sync_to_microenvironment( Microenvironment* pNew_Microenvironment ); // done 
@@ -487,6 +497,10 @@ class Secretion
 	double& uptake_rate( std::string name ); 
 	double& saturation_density( std::string name ); 
 	double& net_export_rate( std::string name );  	
+
+	std::string model = "default";
+private:
+	Advancer advancer;
 };
 
 class Cell_Functions
@@ -523,7 +537,8 @@ class Cell_Functions
 	void (*internal_substrate_function)(Cell* pCell, Phenotype& phenotype , double dt ); 
 	void (*molecular_model_function)(Cell* pCell, Phenotype& phenotype , double dt ); 
 */
-	
+
+	void (*response_to_ecm)(Cell* pCell, Phenotype& phenotype, double dt) = NULL;
 	
 	void (*plot_agent_SVG)(std::ofstream& os, Cell* pCell, double z_slice, std::vector<std::string> (*cell_coloring_function)(Cell*), double X_lower, double Y_lower);
 	void (*plot_agent_legend)(std::ofstream& os, Cell_Definition* cell_def, double& cursor_x, double& cursor_y, std::vector<std::string> (*cell_coloring_function)(Cell*), double temp_cell_radius);
