@@ -87,6 +87,7 @@ double geometric_mean_aggregator(std::vector<double> signals_in)
 
 void AggregatorSignal::set_aggregator(std::string aggregator_name)
 {
+	type = aggregator_name;
 	if (aggregator_name == "sum")
 	{
 		aggregator = sum_aggregator;
@@ -97,6 +98,7 @@ void AggregatorSignal::set_aggregator(std::string aggregator_name)
 	}
 	else if (aggregator_name == "multivariate hill" || aggregator_name == "multivariate_hill")
 	{
+		type = "multivariate hill";
 		aggregator = multivariate_hill_aggregator;
 	}
 	else if (aggregator_name == "mean")
@@ -117,6 +119,7 @@ void AggregatorSignal::set_aggregator(std::string aggregator_name)
 	}
 	else if (aggregator_name == "geometric mean" || aggregator_name == "geometric_mean")
 	{
+		type = "geometric mean";
 		aggregator = geometric_mean_aggregator;
 	}
 	else if (aggregator_name == "first")
@@ -137,7 +140,6 @@ void AggregatorSignal::set_aggregator(std::string aggregator_name)
 		std::cerr << "Must be one of: 'sum', 'product', 'multivariate hill', 'mean', 'max', 'min', 'median', 'geometric mean', 'custom'" << std::endl;
 		exit(-1);
 	}
-	type = aggregator_name;
 	return;
 }
 
