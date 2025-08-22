@@ -541,7 +541,6 @@ void setup_signal_behavior_dictionaries( void )
 		behavior_to_int[temp] = map_index; 
 		int_to_behavior[map_index] = temp; 
 
-
 		// synonym 
 		temp = "transform to cell type " + std::to_string(pCD->type); 
 		behavior_to_int[temp] = map_index; 
@@ -551,9 +550,7 @@ void setup_signal_behavior_dictionaries( void )
 
 		temp = "transition to cell type " + std::to_string(pCD->type); 
 		behavior_to_int[temp] = map_index; 
-
-
-	}	
+	}
 
 	// asymmetic division
 	for( int i=0; i < n ; i++ )
@@ -677,17 +674,8 @@ void display_signal_dictionary( std::ostream& os )
 void display_signal_dictionary( void )
 { display_signal_dictionary( std::cout); std::cout << std::endl; }
 
-
 void display_signal_dictionary_with_synonyms( void )
 { display_signal_dictionary_with_synonyms( std::cout ); }
-/*
-	std::cout << "Signals (with synonyms): " << std::endl 
-			  << "=======================" << std::endl; 
-	for( auto it = signal_to_int.begin() ; it != signal_to_int.end() ; it++ )
-	{ std::cout << it->second << " : " << it->first << std::endl; }
-	std::cout << std::endl << std::endl;  	
-    return; 
-*/
 
 void display_signal_dictionary_with_synonyms( std::ostream& os )
 {
@@ -728,24 +716,14 @@ void display_behavior_dictionary_with_synonyms( std::ostream& os )
 
 void display_behavior_dictionary_with_synonyms( void )
 { display_behavior_dictionary_with_synonyms( std::cout ); return; }
-/*
-	std::cout << "Behaviors (with synonyms): " << std::endl 
-			  << "=========================" << std::endl; 
-	for( auto it = behavior_to_int.begin() ; it != behavior_to_int.end() ; it++ )
-	{ std::cout << it->second << " : " << it->first << std::endl; }
-	std::cout << std::endl << std::endl;  	
-    return; 
-*/	
 
 int find_signal_index( std::string signal_name )
 {
 	auto search = signal_to_int.find( signal_name );
 	// safety first! 
 	if( search != signal_to_int.end() )
-    { return search->second; }   
-
-	std::cout << "having trouble finding " << signal_name << std::endl; 
-
+    { return search->second; }
+	
     return -1; 
 }
 
@@ -2872,5 +2850,4 @@ std::vector<double> get_base_behaviors( Cell* pCell , std::vector<std::string> n
 	{ parameters[n] = get_single_base_behavior(pCell,names[n]); }
 	return parameters; 
 }
-
 };
