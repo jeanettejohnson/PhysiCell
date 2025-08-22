@@ -141,13 +141,15 @@ void setup_signal_behavior_dictionaries( void )
 
         map_index++; 
 	}    
-	
-	// current cycle phase
+
+	// current cycle phase index
 	signal_to_int["current cycle phase"] = map_index;
 	int_to_signal[map_index] = "current cycle phase";
-	// synonym
+	// synonyms
+	signal_to_int["current cycle phase index"] = map_index;
 	signal_to_int["cycle phase"] = map_index;
-	
+	signal_to_int["cycle phase index"] = map_index;
+
 	// mechanical pressure 
 	map_index++;
 	signal_to_int[ "pressure"] = map_index; 
@@ -811,7 +813,7 @@ std::vector<double> get_signals( Cell* pCell )
 	{ signals[start_substrate_grad_ind+i] = norm( pCell->nearest_gradient(i) ); }    
 
 	// current cycle phase
-	static int cycle_phase_ind = find_signal_index( "current cycle phase" );
+	static int cycle_phase_ind = find_signal_index( "cycle phase" );
 	signals[cycle_phase_ind] = pCell->phenotype.cycle.data.current_phase_index;
 
 	// mechanical pressure 
@@ -1072,7 +1074,7 @@ double get_single_signal( Cell* pCell, int index )
 	}
 
 	// current cycle phase 
-	static int cycle_phase_ind = find_signal_index( "current cycle phase" ); 
+	static int cycle_phase_ind = find_signal_index( "cycle phase" ); 
 	if( index == cycle_phase_ind )
 	{
 		out = pCell->phenotype.cycle.data.current_phase_index;
