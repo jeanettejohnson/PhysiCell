@@ -446,7 +446,7 @@ cell_type_1,pressure,decreases,cycle entry,0.0,0.5,4.0,0
 # To-dos
 - [X] Export parsed rules to CSV
 - [ ] Export to human-readable formats
-- [ ] Read CSVs into PhysiCell with extensions
+- [X] Read CSVs into PhysiCell with extensions
 - [ ] Integrate into studio
 - [ ] Finish adding docstrings
 
