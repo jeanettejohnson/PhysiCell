@@ -127,14 +127,13 @@ void AggregatorSignal::set_aggregator(std::string aggregator_name)
 	{
 		aggregator = [](std::vector<double> signals_in)
 		{
-			std::cerr << "ERROR: Custom aggregator not set! Make sure to set one in custom.cpp if using a custom aggregator." << std::endl;
+			std::cerr << "XML Rules ERROR: Custom aggregator not set! Make sure to set one in custom.cpp if using a custom aggregator." << std::endl;
 			exit(-1);
-			return -1;
 		};
 	}
 	else
 	{
-		std::cerr << "ERROR: Aggregator not recognized: " << aggregator_name << std::endl;
+		std::cerr << "XML Rules ERROR: Aggregator not recognized: " << aggregator_name << std::endl;
 		std::cerr << "Must be one of: 'sum', 'product', 'multivariate hill', 'mean', 'max', 'min', 'median', 'geometric mean', 'custom'" << std::endl;
 		exit(-1);
 	}
@@ -176,6 +175,7 @@ void MediatorSignal::set_mediator(std::string mediator_name)
 {
 	if (mediator_name == "decreasing dominant" || mediator_name == "decreasing_dominant")
 	{
+		type = "decreasing dominant";
 		aggregator = [this](std::vector<double> signals_in)
 		{
 			return this->decreasing_dominant_mediator(signals_in);
@@ -183,6 +183,7 @@ void MediatorSignal::set_mediator(std::string mediator_name)
 	}
 	else if (mediator_name == "increasing dominant" || mediator_name == "increasing_dominant")
 	{
+		type = "increasing dominant";
 		aggregator = [this](std::vector<double> signals_in)
 		{
 			return this->increasing_dominant_mediator(signals_in);
@@ -190,6 +191,7 @@ void MediatorSignal::set_mediator(std::string mediator_name)
 	}
 	else if (mediator_name == "neutral" || mediator_name == "neutral_mediator" || mediator_name == "neutral mediator")
 	{
+		type = "neutral";
 		aggregator = [this](std::vector<double> signals_in)
 		{
 			return this->neutral_mediator(signals_in);
@@ -197,20 +199,19 @@ void MediatorSignal::set_mediator(std::string mediator_name)
 	}
 	else if (mediator_name == "custom")
 	{
+		type = "custom";
 		aggregator = [](std::vector<double> signals_in)
 		{
-			std::cerr << "ERROR: Custom mediator not set! Make sure to set one in custom.cpp if using a custom mediator." << std::endl;
+			std::cerr << "XML Rules ERROR: Custom mediator not set! Make sure to set one in custom.cpp if using a custom mediator." << std::endl;
 			exit(-1);
-			return -1;
 		};
 	}
 	else
 	{
-		std::cerr << "ERROR: Mediator not recognized: " << mediator_name << std::endl
+		std::cerr << "XML Rules ERROR: Mediator not recognized: " << mediator_name << std::endl
 				  << "Must be one of: 'decreasing dominant', 'increasing dominant', 'neutral', 'custom'" << std::endl;
 		exit(-1);
 	}
-	type = mediator_name;
 	return;
 }
 
@@ -538,7 +539,7 @@ std::unique_ptr<BehaviorRule> parse_behavior(std::string cell_type, std::string 
 	{
 		return std::unique_ptr<BehaviorRule>(new BehaviorAttenuator(behavior, std::move(pAS), behavior_base, behavior_saturation));
 	}
-	std::cerr << "ERROR: Behavior type not recognized: " << type << std::endl;
+	std::cerr << "XML Rules ERROR: Behavior type not recognized: " << type << std::endl;
 	std::cerr << "Must be one of: setter (or omitted), accumulator, attenuator" << std::endl;
 	exit(-1);
 }
@@ -557,7 +558,7 @@ std::unique_ptr<AbstractSignal> parse_abstract_signal(pugi::xml_node node)
 	{
 		return parse_elementary_signal(node);
 	}
-	std::cerr << "ERROR: Failed to parse node in behavior rulesets:" << std::endl;
+	std::cerr << "XML Rules ERROR: Failed to parse node in behavior rulesets:" << std::endl;
 	node.print(std::cerr);
 	exit(-1);
 }
@@ -598,7 +599,9 @@ std::unique_ptr<AbstractSignal> parse_mediator_signal(pugi::xml_node mediator_no
 	}
 	else
 	{
-		std::cerr << "ERROR: Mediator signal must have a base value." << std::endl;
+		std::cerr << "XML Rules ERROR: Mediator signal must have a base value." << std::endl
+		          << "Must set one for this mediator with a <base_value> element:" << std::endl;
+		mediator_node.print(std::cerr);
 		exit(-1);
 	}
 	pugi::xml_node decreasing_signals_node = mediator_node.child("decreasing_signals");
@@ -696,7 +699,7 @@ std::unique_ptr<AbstractSignal> parse_elementary_signal(pugi::xml_node elementar
 	}
 	else
 	{
-		std::cerr << "ERROR: Elementary signal type not recognized: " << type << std::endl
+		std::cerr << "XML Rules ERROR: Elementary signal type not recognized: " << type << std::endl
 		          << "Must be one of: 'Hill', 'PartialHill', 'Linear', 'Heaviside'."
 				  << "Note: each of these options has alternative capitalizations and/or synonyms.";
 		exit(-1);
@@ -712,7 +715,7 @@ std::unique_ptr<AbstractSignal> parse_elementary_signal(pugi::xml_node elementar
 		}
 		else
 		{
-			std::cerr << "ERROR: Reference defined for a Signal that is not a relative signal." << std::endl
+			std::cerr << "XML Rules ERROR: Reference defined for a Signal that is not a relative signal." << std::endl
 					  << "Relative signals include: 'PartialHill' and 'Hill'.";
 			exit(-1);
 		}
@@ -792,7 +795,13 @@ void parse_reference(pugi::xml_node reference_node, RelativeSignal *pRelSig)
 	}
 	else
 	{
-		std::cerr << "ERROR: Reference type not recognized: " << type << std::endl;
+		std::cerr << "XML Rules ERROR: Reference type not recognized: " << type << std::endl
+		          << "Must be one of increasing or decreasing." << std::endl
+				  << "Update the reference element as follows:" << std::endl
+				  << "    <reference>" << std::endl
+				  << "        <type>increasing</type>  <!-- or <type>decreasing</type> -->" << std::endl
+				  << "        <value>" << reference_value << "</value>" << std::endl
+				  << "    </reference>" << std::endl;
 		exit(-1);
 	}
     pRelSig->add_reference(std::move(pSR));
@@ -804,7 +813,7 @@ void parse_behavior_rules_from_pugixml( void )
 	pugi::xml_node node = physicell_config_root.child( "cell_rules" ); 
 	if( !node )
 	{ 
-		std::cout << "Warning: Could not find <cell_rules> section of XML config file." << std::endl 
+		std::cout << "XML Rules Warning: Could not find <cell_rules> section of XML config file." << std::endl 
 				 <<  "       Cannot parse cell rules, so disabling." << std::endl; 
 
 		PhysiCell_settings.rules_enabled = false; 
@@ -815,17 +824,18 @@ void parse_behavior_rules_from_pugixml( void )
 	node = node.child( "rulesets" ); 
 	if( !node )
 	{ 
-		std::cout << "Warning: Could not find <rulesets> in the <cell_rules> section of XML config file." << std::endl 
+		std::cout << "XML Rules Warning: Could not find <rulesets> in the <cell_rules> section of XML config file." << std::endl 
 				 <<  "       Cannot parse cell rules, so disabling." << std::endl; 
 
 		PhysiCell_settings.rules_enabled = false; 
 		return; 
 	}
+
 	// find the first ruleset 
 	node = node.child( "ruleset");
 	if( !node )
 	{ 
-		std::cout << "Warning: Could not find any <ruleset> in the <rulesets> section of XML config file." << std::endl 
+		std::cout << "XML Rules Warning: Could not find any <ruleset> in the <rulesets> section of XML config file." << std::endl 
 				 <<  "       Cannot parse cell rules, so disabling." << std::endl; 
 
 		PhysiCell_settings.rules_enabled = false; 
@@ -885,7 +895,8 @@ void parse_behavior_rules_from_file(std::string path_to_file, std::string format
 	}
 	else
 	{
-		std::cerr << "\tError: Unknown format (" << format << ") for ruleset " << path_to_file << ". Quitting!" << std::endl;
+		std::cerr << "\tError: Unknown format (" << format << ") for ruleset " << path_to_file << std::endl
+				  << "\tMust be one of: 'CSV' (or 'csv') or 'XML' (or 'xml')" << std::endl;
 		exit(-1);
 	}
 	PhysiCell_settings.rules_enabled = true;
@@ -899,7 +910,7 @@ void parse_csv_behavior_rules(std::string path_to_file, std::string protocol, do
 	std::fstream fs( path_to_file, std::ios::in );
 	if( !fs )
 	{
-		std::cout << "Warning: Rules file " << path_to_file << " failed to open." << std::endl; 
+		std::cout << "XML Rules Warning: Rules file " << path_to_file << " failed to open." << std::endl; 
 		return; 
 	}
 
@@ -914,8 +925,6 @@ void parse_csv_behavior_rules(std::string path_to_file, std::string protocol, do
 	}
 
 	fs.close(); 
-
-	std::cout << "Done!" << std::endl << std::endl; 
 
 	return; 
 }
@@ -936,7 +945,7 @@ void parse_csv_behavior_rule(std::string line)
 
 	if (is_csv_rule_misformed(tokenized_string))
 	{
-		std::cout << "Warning: Misformed rule (likely from an empty rules file). Skipping." << std::endl; 
+		std::cout << "XML Rules Warning: Misformed rule (likely from an empty rules file). Skipping." << std::endl; 
 
 		for( int n=0 ; n < tokenized_string.size(); n++ )
 		{
@@ -1108,7 +1117,8 @@ void set_custom_aggregator(const std::string &cell_definition_name, const std::s
 	}
 	else
 	{
-		std::cerr << "Error: Response type not recognized: " << response << std::endl;
+		std::cerr << "Error: Response type not recognized: " << response << std::endl
+		          << "Must be one of: 'increases' or 'decreases'" << std::endl;
 		exit(-1);
 	}
 	pAS->aggregator = aggregator_function;
@@ -1208,7 +1218,7 @@ void export_behavior_rules( std::string filename )
 	std::fstream fs( filename, std::ios::out );
 	if( !fs )
 	{
-		std::cerr << "ERROR: Rules export file " << filename << " failed to open." << std::endl; 
+		std::cerr << "XML Rules ERROR: Rules export file " << filename << " failed to open." << std::endl; 
 		exit(-1); 
 	}
 
