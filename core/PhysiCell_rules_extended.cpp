@@ -98,7 +98,7 @@ void AggregatorSignal::set_aggregator(std::string aggregator_name)
 	}
 	else if (aggregator_name == "multivariate hill" || aggregator_name == "multivariate_hill")
 	{
-		type = "multivariate hill";
+		type = "multivariate_hill";
 		aggregator = multivariate_hill_aggregator;
 	}
 	else if (aggregator_name == "mean")
@@ -119,7 +119,7 @@ void AggregatorSignal::set_aggregator(std::string aggregator_name)
 	}
 	else if (aggregator_name == "geometric mean" || aggregator_name == "geometric_mean")
 	{
-		type = "geometric mean";
+		type = "geometric_mean";
 		aggregator = geometric_mean_aggregator;
 	}
 	else if (aggregator_name == "first")
@@ -175,9 +175,10 @@ double MediatorSignal::neutral_mediator(std::vector<double> signals_in)
 
 void MediatorSignal::set_mediator(std::string mediator_name)
 {
+	type = mediator_name;
 	if (mediator_name == "decreasing dominant" || mediator_name == "decreasing_dominant")
 	{
-		type = "decreasing dominant";
+		type = "decreasing_dominant";
 		aggregator = [this](std::vector<double> signals_in)
 		{
 			return this->decreasing_dominant_mediator(signals_in);
@@ -185,7 +186,7 @@ void MediatorSignal::set_mediator(std::string mediator_name)
 	}
 	else if (mediator_name == "increasing dominant" || mediator_name == "increasing_dominant")
 	{
-		type = "increasing dominant";
+		type = "increasing_dominant";
 		aggregator = [this](std::vector<double> signals_in)
 		{
 			return this->increasing_dominant_mediator(signals_in);
@@ -201,7 +202,6 @@ void MediatorSignal::set_mediator(std::string mediator_name)
 	}
 	else if (mediator_name == "custom")
 	{
-		type = "custom";
 		aggregator = [](std::vector<double> signals_in)
 		{
 			std::cerr << "XML Rules ERROR: Custom mediator not set! Make sure to set one in custom.cpp if using a custom mediator." << std::endl;
