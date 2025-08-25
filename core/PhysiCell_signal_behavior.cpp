@@ -862,7 +862,7 @@ std::vector<double> get_signals( Cell* pCell )
 
 	// number of spring attachments
 	static int num_spring_attachments_ind = find_signal_index( "number of spring attachments"); 
-	signals[num_spring_attachments_ind] = pCell->state.spring_attached_cells.size
+	signals[num_spring_attachments_ind] = pCell->state.spring_attachments.size();
 
 	// damage
 	static int damage_ind = find_signal_index( "damage"); 
