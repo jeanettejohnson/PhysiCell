@@ -376,7 +376,7 @@ void copy_file_to_output(const std::string &filename, const std::string &default
 		basename = basename.substr(found + 1);
 	}
 
-	std::string output_filename = PhysiCell_settings.folder /*+ "/" + basename*/;
+	std::string output_filename = PhysiCell_settings.folder + "/" + basename;
 
 	// copy filename to output_filename
 	char copy_command[1024];
