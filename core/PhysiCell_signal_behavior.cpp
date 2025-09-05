@@ -2846,10 +2846,10 @@ double get_single_base_behavior( Cell_Definition* pCD , int index )
 	if( index >= first_asymmetric_division_index && index < first_asymmetric_division_index + n )
 	{ return pCD->phenotype.cycle.asymmetric_division.asymmetric_division_probabilities[index-first_asymmetric_division_index]; }
 
-	// DZ change for extended asym div
+	// extended asym div
 	static int first_extended_asymmetric_division_index = find_behavior_index( "extended asymmetric division to " + cell_definitions_by_type[0]->name + " and " + cell_definitions_by_type[0]->name );
 	if( index >= first_extended_asymmetric_division_index && index < first_extended_asymmetric_division_index + n * (n + 1) / 2 )
-	{ return pCD->phenotype.cycle.extended_asymmetric_division.asymmetric_division_probabilities[extended_asym_index_to_upper_triangle(index - first_extended_asymmetric_division_index)]; }
+	{ return pCD->phenotype.cycle.asymmetric_division.asymmetric_division_probability(index - first_extended_asymmetric_division_index); }
 
 	// custom behavior
 	static int first_custom_ind = find_behavior_index( "custom 0"); 
