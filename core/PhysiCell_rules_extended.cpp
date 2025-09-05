@@ -132,6 +132,7 @@ void AggregatorSignal::set_aggregator(std::string aggregator_name)
 		{
 			std::cerr << "XML Rules ERROR: Custom aggregator not set! Make sure to set one in custom.cpp if using a custom aggregator." << std::endl;
 			exit(-1);
+			return 0.0; // required to avoid compiler error as aggregator must return a double
 		};
 	}
 	else
@@ -206,6 +207,7 @@ void MediatorSignal::set_mediator(std::string mediator_name)
 		{
 			std::cerr << "XML Rules ERROR: Custom mediator not set! Make sure to set one in custom.cpp if using a custom mediator." << std::endl;
 			exit(-1);
+			return 0.0; // required to avoid compiler error as aggregator must return a double
 		};
 	}
 	else
