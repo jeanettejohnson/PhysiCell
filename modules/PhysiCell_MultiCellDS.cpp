@@ -566,7 +566,7 @@ void add_PhysiCell_cells_to_open_xml_pugi_v2( pugi::xml_document& xml_dom, std::
 	// asymmetric division
 		// std::vector<double> asymmetric_division_probabilities; // n
 		add_variable_to_labels( data_names, data_units, data_start_indices, data_sizes, 
-			"asymmetric_division_probabilities" , "none" , n );
+			"asymmetric_division_probabilities" , "none" , n * (n+1) / 2 );
 
 	// cell integrity 
 
@@ -977,7 +977,14 @@ void add_PhysiCell_cells_to_open_xml_pugi_v2( pugi::xml_document& xml_dom, std::
 
 // asymmetric division
 		// name = "asymmetric_division_rate"; 
-		std::fwrite( pCell->phenotype.cycle.asymmetric_division.asymmetric_division_probabilities.data() , sizeof(double) , n, fp );
+		for ( int i1 = 0; i1 < n; i1++ )
+		{
+			for ( int i2 = i1; i2 < n; i2++ )
+			{
+				double prob = pCell->phenotype.cycle.asymmetric_division.asymmetric_division_probability(i1, i2);
+				std::fwrite(&prob, sizeof(double), 1, fp);
+			}
+		}
 
 	// cell integrity 
  		// name = "damage"; 
