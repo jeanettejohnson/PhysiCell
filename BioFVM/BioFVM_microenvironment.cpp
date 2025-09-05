@@ -1472,7 +1472,6 @@ void load_initial_conditions_from_csv(std::string filename)
 	bool header_provided = false;
 	if( c == 'X' || c == 'x' )
 	{ 
-		// do not support this with a header yet
 		if ((line.c_str()[2] != 'Y' && line.c_str()[2] != 'y') || (line.c_str()[4] != 'Z' && line.c_str()[4] != 'z'))
 		{
 			std::cout << "ERROR: Header row starts with x but then not y,z? What is this? Exiting now." << std::endl;
@@ -1518,20 +1517,11 @@ void load_initial_conditions_from_csv(std::string filename)
 	}
 
 	std::cout << "Loading substrate initial conditions from CSV file " << filename << " ... " << std::endl;
-	std::vector<int> voxel_set = {}; // set to check that no voxel value is set twice
-	
+	std::vector<bool> voxel_is_set(microenvironment.number_of_voxels(), false); // set to check that no voxel value is set twice
+
 	while (std::getline(file, line))
 	{
-		get_row_from_substrate_initial_condition_csv(voxel_set, line, substrate_indices, header_provided);
-	}
-	
-	if (voxel_set.size() != microenvironment.number_of_voxels())
-	{
-		std::cout << "ERROR : Wrong number of voxels supplied in the .csv file specifying BioFVM initial conditions." << std::endl
-				  << "\tExpected: " << microenvironment.number_of_voxels() << std::endl
-				  << "\tFound: " << voxel_set.size() << std::endl
-				  << "\tRemember, your table should have dimensions #voxels x (3 + #densities)." << std::endl;
-		exit(-1);
+		get_row_from_substrate_initial_condition_csv(voxel_is_set, line, substrate_indices, header_provided);
 	}
 
 	file.close(); 	
@@ -1539,11 +1529,11 @@ void load_initial_conditions_from_csv(std::string filename)
 	return;
 }
 
-void get_row_from_substrate_initial_condition_csv(std::vector<int> &voxel_set, const std::string line, const std::vector<int> substrate_indices, const bool header_provided)
+void get_row_from_substrate_initial_condition_csv(std::vector<bool> &voxel_is_set, const std::string line, const std::vector<int> substrate_indices, const bool header_provided)
 {
 	static bool warning_issued = false;
 	std::vector<double> data;
-	csv_to_vector(line.c_str(), data);
+	substrate_csv_to_vector(line.c_str(), data);
 
 	if (!(warning_issued) && !(header_provided) && (data.size() != (microenvironment.number_of_densities() + 3)))
 	{
@@ -1557,19 +1547,17 @@ void get_row_from_substrate_initial_condition_csv(std::vector<int> &voxel_set, c
 
 	std::vector<double> position = {data[0], data[1], data[2]};
 	int voxel_ind = microenvironment.mesh.nearest_voxel_index(position);
+	if (voxel_is_set[voxel_ind])
+	{
+		std::cout << "ERROR : the csv-supplied initial conditions for BioFVM repeat the same voxel. Fix the .csv file and try again." << std::endl
+				  << "\tPosition that was repeated: " << position << std::endl;
+		exit(-1);
+	}
+	voxel_is_set[voxel_ind] = true;
 	for (unsigned int ci = 0; ci < substrate_indices.size(); ci++) // column index, counting from the first substrate (or just the index of the vector substrate_indices)
 	{
 		microenvironment.density_vector(voxel_ind)[substrate_indices[ci]] = data[ci + 3];
 	}
-	for (unsigned int j = 0; j < voxel_set.size(); j++)
-	{
-		if (voxel_ind == voxel_set[j])
-		{
-			std::cout << "ERROR : the csv-supplied initial conditions for BioFVM repeat the same voxel. Fix the .csv file and try again." << std::endl
-					  << "\tPosition that was repeated: " << position << std::endl;
-			exit(-1);
-		}
-	}
-	voxel_set.push_back(voxel_ind);
 }
+
 };

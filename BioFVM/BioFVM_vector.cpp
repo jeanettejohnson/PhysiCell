@@ -376,6 +376,46 @@ void csv_to_vector( const char* buffer , std::vector<double>& vect )
 	return; 
 }
 
+void substrate_csv_to_vector(const char* buffer, std::vector<double>& vect)
+{
+    vect.clear();
+
+    const char* start = buffer;
+    const char* end   = buffer;
+
+    while (*end != '\0')
+    {
+        if (*end == ',')
+        {
+            if (start == end) 
+            {
+                // Empty field: treat as 0
+                vect.push_back(0.0);
+            }
+            else
+            {
+                vect.push_back(strtod(start, nullptr));
+            }
+            end++;
+            start = end;
+        }
+        else
+        {
+            end++;
+        }
+    }
+
+    // Handle the last field (could be empty at end of line)
+    if (start == end)
+    {
+        vect.push_back(0.0);
+    }
+    else
+    {
+        vect.push_back(strtod(start, nullptr));
+    }
+}
+
 char* vector_to_csv( const std::vector<double>& vect )
 { 
 	static int datum_size = 16;  // format = %.7e, 1 (sign) + 1 (lead) + 1 (decimal) + 7 (figs) + 2 (e, sign) + 3 (exponent) + 1 (delimiter) = 16
