@@ -168,9 +168,9 @@ Cell_Definition::Cell_Definition()
 	// bug fix July 31 2023
 	
 	functions.set_orientation = NULL;
-
-	functions.response_to_ecm = NULL;
 	
+	functions.response_to_ecm = NULL;
+
 	// new March 2022 : make sure Cell_Interactions and Cell_Transformations 
 	// 					are appropriately sized. Same on motiltiy. 
 	phenotype.cell_interactions.sync_to_cell_definitions(); 
@@ -264,7 +264,7 @@ void Cell::update_motility_vector( double dt_ )
 		phenotype.motility.motility_vector.assign( 3, 0.0 ); 
 		return; 
 	}
-
+	
 	static bool is_first_time = true;
 	is_first_time &= PhysiCell_globals.current_time == 0; // is_first_time starts true; switches to false the first time the current time is !=0 here; then stays false forever
 
@@ -427,6 +427,8 @@ Cell::Cell()
 	
 	is_movable = true;
 	is_out_of_domain = false;
+	generation = 0;		// linaeage tracking from rheiland
+    parentID = -1;   // overridden in create_cell() and divide() linaeage tracing from rheiland
 	displacement.resize(3,0.0); // state? 
 	
 	assign_orientation();
@@ -575,6 +577,14 @@ Cell* Cell::divide( )
 	
 	Cell* child = create_cell(functions.instantiate_cell);
 	child->copy_data( this );	
+	// lineage tracking from rheiland
+    generation = generation + 1;     // this (parent) cell has its generation incremented
+    child->generation = generation;  // daughter cell has the same generation
+    // child->generation = generation + 1;
+    // child->parentID = parentID;
+    parentID = ID;
+    child->parentID = ID;
+	// end lineage tracking
 	child->copy_function_pointers(this);
 	child->parameters = parameters;
 	
@@ -1078,12 +1088,13 @@ void Cell::add_potentials(Cell* other_agent)
 Cell* create_cell( Cell* (*custom_instantiate)())
 {
 	Cell* pNew; 
+	
 	if (custom_instantiate) {
 		pNew = custom_instantiate();
 	} else {
 		pNew = standard_instantiate_cell();
 	}
-	
+	pNew->parentID = pNew->ID; // lineage tracking from rheiland
 	(*all_cells).push_back( pNew ); 
 	pNew->index=(*all_cells).size()-1;
 	
@@ -1126,8 +1137,8 @@ Cell* create_cell( Cell_Definition& cd )
 	
 	pNew->assign_orientation();
 	
-	pNew->set_total_volume( pNew->phenotype.volume.total );
-
+	pNew->set_total_volume( pNew->phenotype.volume.total ); 
+	
 	return pNew; 
 }
 
@@ -1708,7 +1719,7 @@ void prebuild_cell_definition_index_maps( void )
 		node = node.next_sibling( "cell_definition" ); 
 		n++; 
 	}	
-
+	
 	return; 
 }
 
@@ -2273,8 +2284,13 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 		node = node.child( "standard_asymmetric_division" );
 		if( node && node.attribute("enabled").as_bool() )
 		{
+			pugi::xml_node node_EAD = cd_node.child( "phenotype" ).child( "cycle" ).child( "extended_asymmetric_division" );
+			if( node_EAD && node_EAD.attribute("enabled").as_bool() )
+			{
+				std::cerr << "Error: Both standard and extended asymmetric division enabled for cell type " + pCD->name << std::endl;
+				exit(-1);
+			}
 			Asymmetric_Division *pAD = &(pCD->phenotype.cycle.asymmetric_division);
-
 			// asymmetric division rates
 			pugi::xml_node node_adp = node.child( "asymmetric_division_probability");
 			while (node_adp)
@@ -2309,6 +2325,55 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 			std::cout << std::endl;
 			pCD->functions.cell_division_function = standard_asymmetric_division_function;
 		}
+
+		node = cd_node.child( "phenotype" );
+		node = node.child( "cycle" );
+		node = node.child( "extended_asymmetric_division" );
+		if( node && node.attribute("enabled").as_bool() )
+		{
+			Extended_Asymmetric_Division *pEAD = &(pCD->phenotype.cycle.extended_asymmetric_division);
+
+			// asymmetric division rates
+			pugi::xml_node node_eadp = node.child( "extended_asymmetric_division_probability" );
+
+			while (node_eadp)
+			{
+				// get the name of the target cell type
+				std::string first_target_name = node_eadp.attribute("name1").value();
+				std::string second_target_name = node_eadp.attribute("name2").value();
+				// now find its index
+				auto first_search = cell_definition_indices_by_name.find(first_target_name);
+				auto second_search = cell_definition_indices_by_name.find(second_target_name);
+				
+				// safety first!
+				if( first_search == cell_definition_indices_by_name.end() || second_search == cell_definition_indices_by_name.end() )
+				{
+					std::cout << "Error: When processing the " << pCD->name << " cell definition: " << std::endl
+						<< "\tCould not find cell type " << first_target_name << " or " << second_target_name << " for asymmetric division." << std::endl
+						<< "\tRemove this cell type from the extended asymmetric division probabilities!" << std::endl << std::endl;
+					exit(-1);
+				}
+
+				// if the target is found, set the appropriate rate
+				int first_target_index = first_search->second;
+				int second_target_index = second_search->second;
+
+				double extended_asymmetric_division_probability = xml_get_my_double_value(node_eadp);
+				pEAD->asymmetric_division_probabilities[std::make_pair(first_target_index, second_target_index)] = extended_asymmetric_division_probability;
+
+				node_eadp = node_eadp.next_sibling("extended_asymmetric_division_probability");
+			}
+			/* Probably delete...
+			std::cout << "Extended asymmetric division probabilities for " << pCD->name << ": " << std::endl; // DZ delete?
+			for (auto it = pEAD->asymmetric_division_probabilities.begin(); it != pEAD->asymmetric_division_probabilities.end(); ++it)
+			{
+				std::cout << cell_definitions_by_index[it->first.first]->name << " and " << cell_definitions_by_index[it->first.first]->name << ": " << it->second << std::endl; // sometimes throws seg fault
+			}
+			*/
+			std::cout << std::endl;
+			pCD->functions.cell_division_function = extended_asymmetric_division_function;
+		}
+
 	}
 	
 	// here's what it ***should*** do: 
@@ -2318,6 +2383,7 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 	// otherwise, modify properties of that model 
 	
 	// set up the death models 
+//	int death_model_index = 0; 
 	node = cd_node.child( "phenotype" );
 	node = node.child( "death" ); 
 	if( node )
@@ -2411,6 +2477,9 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 				if( node_temp )
 				{ death_params.lysed_fluid_change_rate = xml_get_my_double_value( node_temp ); }
 
+	//			death_params.time_units = 
+	//				get_string_attribute_value( node, "unlysed_fluid_change_rate", "units" ); 
+				
 				node = node.parent(); 
 			}
 					
@@ -2418,6 +2487,7 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 			// if the model already exists, just overwrite the parameters 
             if (model == PhysiCell_constants::apoptosis_death_model) 
             {
+//					pCD->phenotype.death.add_death_model( rate , &apoptosis , apoptosis_parameters );
                 if( death_model_already_exists == false )
                 {
                     pCD->phenotype.death.add_death_model( rate , &apoptosis , death_params ); 
@@ -2432,6 +2502,7 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
             else if (model == PhysiCell_constants::necrosis_death_model) 
             {
                 // set necrosis parameters 
+//					pCD->phenotype.death.add_death_model( rate , &necrosis , necrosis_parameters );
                 if( death_model_already_exists == false )
                 {
                     pCD->phenotype.death.add_death_model( rate , &necrosis , death_params ); 
@@ -2876,7 +2947,7 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 	if( node )
 	{
 		Secretion* pS = &(pCD->phenotype.secretion);
-
+		
 		pugi::xml_attribute attr = node.attribute("model");
 		std::string model = "default";
 		pS->set_advancer(&Secretion::default_advancer);
@@ -2905,19 +2976,17 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 				<< "       Please double-check your substrate name in the config file." << std::endl << std::endl; 
 				exit(-1); 
 			}			
-
-
 	
 			// secretion rate
 			pugi::xml_node node_sec1 = node_sec.child( "secretion_rate" ); 
 			if( node_sec1 )
 			{ pS->secretion_rates[index] = xml_get_my_double_value( node_sec1 ); }
-			
+
 			// net export rate 
 			node_sec1 = node_sec.child( "net_export_rate" ); 
 			if( node_sec1 )
 			{ pS->net_export_rates[index] = xml_get_my_double_value( node_sec1 ); }
-			
+
 			// could skip secretion_target and uptake_rate if using transmembrane_diffusion
 			if (model == "transmembrane_diffusion") {
 				node_sec = node_sec.next_sibling( "substrate" ); 
@@ -2928,12 +2997,12 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 			node_sec1 = node_sec.child( "secretion_target" ); 
 			if( node_sec1 )
 			{ pS->saturation_densities[index] = xml_get_my_double_value( node_sec1 ); }
-	
+
 			// uptake rate 
 			node_sec1 = node_sec.child( "uptake_rate" ); 
 			if( node_sec1 )
 			{ pS->uptake_rates[index] = xml_get_my_double_value( node_sec1 ); }
-			
+
 			node_sec = node_sec.next_sibling( "substrate" ); 
 		}
 	}	
@@ -2954,7 +3023,11 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 			// pCI->dead_phagocytosis_rate = xml_get_my_double_value(node_dpr); 
 			dead_phagocytosis_rate = xml_get_my_double_value(node_dpr); 
 		}
-
+/*
+		pCI->apoptotic_phagocytosis_rate = pCI->dead_phagocytosis_rate; 
+		pCI->necrotic_phagocytosis_rate = pCI->dead_phagocytosis_rate; 
+		pCI->other_dead_phagocytosis_rate = pCI->dead_phagocytosis_rate; 
+*/
 		pCI->apoptotic_phagocytosis_rate = dead_phagocytosis_rate; 
 		pCI->necrotic_phagocytosis_rate = dead_phagocytosis_rate; 
 		pCI->other_dead_phagocytosis_rate = dead_phagocytosis_rate; 
@@ -3129,7 +3202,7 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 
 	node = cd_node.child( "phenotype" );
 
-	// intracellular
+		// intracellular
 	node = cd_node.child( "phenotype" );
 	node = node.child("intracellular");
 	if (node)
@@ -3196,7 +3269,7 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 		// set conserved attribute 
 		node1 = node1.next_sibling(); 
 	}
-
+	
 	node = cd_node.child( "ecm_interactions" );
 	if (PhysiCell_settings.ecm_enabled && node && node.attribute("enabled").as_bool())
 	{
@@ -3306,6 +3379,7 @@ void parse_intracellular_model(pugi::xml_node node, Cell_Definition* pCD, Cell_D
 		exit(-1);
 	}
 }
+
 
 void initialize_cell_definitions_from_pugixml( pugi::xml_node root )
 {

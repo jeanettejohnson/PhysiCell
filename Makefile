@@ -11,31 +11,82 @@ ifdef PHYSICELL_CPP
 	CC := $(PHYSICELL_CPP)
 endif
 
+ifndef STATIC_OPENMP
+	STATIC_OPENMP = -fopenmp
+endif
+
 ARCH := native # best auto-tuning
 # ARCH := core2 # a reasonably safe default for most CPUs since 2007
 # ARCH := corei7
+# ARCH := corei7-avx # earlier i7 
 # ARCH := core-avx-i # i7 ivy bridge or newer 
 # ARCH := core-avx2 # i7 with Haswell or newer
+# ARCH := nehalem
+# ARCH := westmere
+# ARCH := sandybridge # circa 2011
+# ARCH := ivybridge   # circa 2012
+# ARCH := haswell     # circa 2013
+# ARCH := broadwell   # circa 2014
+# ARCH := skylake     # circa 2015
+# ARCH := bonnell
 # ARCH := silvermont
 # ARCH := skylake-avx512
 # ARCH := nocona #64-bit pentium 4 or later 
 
-# CFLAGS := -march=$(ARCH) -Ofast -s -fomit-frame-pointer -mfpmath=both -fopenmp -m64 -std=c++11
-CFLAGS := -march=$(ARCH) -O3 -fomit-frame-pointer -mfpmath=both -fopenmp -m64 -std=c++11
+CFLAGS := -march=$(ARCH) -O3 -fomit-frame-pointer -fopenmp -m64 -std=c++11 -D ADDON_ROADRUNNER
 
+OSFLAG 	:=
 ifeq ($(OS),Windows_NT)
+	OSFLAG += -D WIN32
+	OMP_LIB := 
+#	LIBRR_DIR := C:\Users\heiland\libroadrunner\roadrunner-win64-vs14-cp35m
+#	LIBRR_LIBS := C:\Users\heiland\libroadrunner\roadrunner-win64-vs14-cp35m/bin
+#	LIBRR_CFLAGS := -I${LIBRR_DIR}/include/rr/C
+#	CFLAGS := -march=$(ARCH) -fomit-frame-pointer -fopenmp -m64 -std=c++11 -D ADDON_ROADRUNNER 
+	LIBRR_DIR := .\addons\libRoadrunner\roadrunner
+	LIBRR_CFLAGS := -I${LIBRR_DIR}\include\rr\C
+	LIBRR_LIBS := ${LIBRR_DIR}\lib
+	ifeq ($(PROCESSOR_ARCHITECTURE),AMD64)
+		OSFLAG += -D AMD64
+	endif
+	ifeq ($(PROCESSOR_ARCHITECTURE),x86)
+		OSFLAG += -D IA32
+	endif
 else
 	UNAME_S := $(shell uname -s)
-	ifeq ($(UNAME_S),Darwin)
-		UNAME_P := $(shell uname -p)
-		var := $(shell which $(CC) | xargs file)
-		ifeq ($(lastword $(var)),arm64)
-		  CFLAGS := -march=$(ARCH) -O3 -fomit-frame-pointer -fopenmp -m64 -std=c++11
-		endif
+	ifeq ($(UNAME_S),Linux)
+		OSFLAG += -D LINUX
+		OMP_LIB :=
+#		LIBRR_DIR := $(shell pwd)/intracellular_libs/roadrunner
+		LIBRR_DIR := ./addons/libRoadrunner/roadrunner
+		LIBRR_CFLAGS := -I${LIBRR_DIR}/include/rr/C
+		LIBRR_LIBS := ${LIBRR_DIR}/lib
 	endif
+	ifeq ($(UNAME_S),Darwin)
+		OSFLAG += -D OSX
+		LIBRR_DIR := ./addons/libRoadrunner/roadrunner
+		LIBRR_CFLAGS := -I${LIBRR_DIR}/include/rr/C
+		LIBRR_LIBS := ${LIBRR_DIR}/lib
+	endif
+
+#	 Not sure if useful later or not.
+#	UNAME_P := $(shell uname -p)
+#	ifeq ($(UNAME_P),x86_64)
+#		OSFLAG += -D AMD64
+#		LIBRR_DIR := $(shell pwd)/intracellular_libs/roadrunner
+#		LIBRR_CFLAGS := -I${LIBRR_DIR}/include/rr/C
+#		# CFLAGS := -march=$(ARCH) -fomit-frame-pointer -fopenmp -m64 -std=c++11 -D LIBROADRUNNER 
+#		CFLAGS := -march=$(ARCH) -fomit-frame-pointer -fopenmp -m64 -std=c++11 -D ADDON_ROADRUNNER 
+#	endif
+#	ifneq ($(filter %86,$(UNAME_P)),)
+#		OSFLAG += -D IA32
+#	endif
+#	ifneq ($(filter arm%,$(UNAME_P)),)
+#		OSFLAG += -D ARM
+#	endif
 endif
 
-COMPILE_COMMAND := $(CC) $(CFLAGS) 
+COMPILE_COMMAND := $(CC) $(CFLAGS) $(LIBRR_CFLAGS) 
 
 BioFVM_OBJECTS := BioFVM_vector.o BioFVM_mesh.o BioFVM_microenvironment.o BioFVM_solvers.o BioFVM_matlab.o \
 BioFVM_utilities.o BioFVM_basic_agent.o BioFVM_MultiCellDS.o BioFVM_agent_container.o 
@@ -48,21 +99,29 @@ PhysiCell_module_OBJECTS := PhysiCell_SVG.o PhysiCell_pathology.o PhysiCell_Mult
 PhysiCell_pugixml.o PhysiCell_settings.o PhysiCell_geometry.o
 
 # put your custom objects here (they should be in the custom_modules directory)
-
-PhysiCell_custom_module_OBJECTS := .o
+PhysiCell_custom_module_OBJECTS := custom.o 
 
 pugixml_OBJECTS := pugixml.o
 
+ROADRUNNER_OBJECTS := librr_intracellular.o 
+
 PhysiCell_OBJECTS := $(BioFVM_OBJECTS)  $(pugixml_OBJECTS) $(PhysiCell_core_OBJECTS) $(PhysiCell_module_OBJECTS)
-ALL_OBJECTS := $(PhysiCell_OBJECTS) $(PhysiCell_custom_module_OBJECTS)
+ALL_OBJECTS := $(PhysiCell_OBJECTS) $(PhysiCell_custom_module_OBJECTS) $(ROADRUNNER_OBJECTS)
 
-EXAMPLES := ./examples/PhysiCell_test_mechanics_1.cpp ./examples/PhysiCell_test_mechanics_2.cpp \
- ./examples/PhysiCell_test_DCIS.cpp ./examples/PhysiCell_test_HDS.cpp \
- ./examples/PhysiCell_test_cell_cycle.cpp ./examples/PhysiCell_test_volume.cpp 
+# compile the project 
 
-all: 
-	make heterogeneity-sample
-	make 
+#all: main.cpp $(ALL_OBJECTS)
+#	$(COMPILE_COMMAND) -o $(PROGRAM_NAME) $(ALL_OBJECTS) main.cpp 
+
+all: libRoadrunner main.cpp $(ALL_OBJECTS)
+	@echo Your OS= $(OSFLAG)
+	@echo LIBRR_CFLAGS= $(LIBRR_CFLAGS)
+	@echo LIBRR_LIBS= $(LIBRR_LIBS)
+	@echo 
+	$(COMPILE_COMMAND) $(OMP_LIB) -o $(PROGRAM_NAME) $(ALL_OBJECTS) main.cpp -L$(LIBRR_LIBS) -lroadrunner_c_api
+	@echo
+	@echo created $(PROGRAM_NAME)
+	@echo
 
 name:
 	@echo ""
@@ -207,6 +266,7 @@ mechano-sample:
 	cp ./sample_projects/mechano/main.cpp ./main.cpp 
 	cp Makefile Makefile-backup
 	cp ./sample_projects/mechano/Makefile .
+	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml 
 	cp ./sample_projects/mechano/config/* ./config/
 
 rules-sample:
@@ -260,6 +320,7 @@ episode-sample:
 	cp ./sample_projects/episode/main.cpp ./main.cpp
 	cp Makefile Makefile-backup
 	cp ./sample_projects/episode/Makefile .
+	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml 
 	cp -r ./sample_projects/episode/config/* ./config
 
 dirichlet-from-file-sample:
@@ -270,6 +331,15 @@ dirichlet-from-file-sample:
 	cp ./sample_projects/dirichlet_from_file/Makefile .
 	cp -r ./sample_projects/dirichlet_from_file/config/* ./config 
 	
+extended-asym-div-sample:
+	cp -r ./sample_projects/extended_asym_div/custom_modules/* ./custom_modules/
+	touch main.cpp && cp main.cpp main-backup.cpp
+	cp ./sample_projects/extended_asym_div/main.cpp ./main.cpp 
+	cp Makefile Makefile-backup
+	cp ./sample_projects/extended_asym_div/Makefile .
+	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml 
+	cp -r ./sample_projects/extended_asym_div/config/* ./config/
+
 # ---- intracellular projects 
 ode-energy-sample:
 	cp ./sample_projects_intracellular/ode/ode_energy/custom_modules/* ./custom_modules/
@@ -475,6 +545,12 @@ PhysiCell_constants.o: ./core/PhysiCell_constants.cpp
 PhysiCell_signal_behavior.o: ./core/PhysiCell_signal_behavior.cpp
 	$(COMPILE_COMMAND) -c ./core/PhysiCell_signal_behavior.cpp 
 
+PhysiCell_basic_signaling.o: ./core/PhysiCell_basic_signaling.cpp
+	$(COMPILE_COMMAND) -c ./core/PhysiCell_basic_signaling.cpp
+	
+PhysiCell_geometry.o: ./modules/PhysiCell_geometry.cpp
+	$(COMPILE_COMMAND) -c ./modules/PhysiCell_geometry.cpp 
+
 PhysiCell_rules_extended.o: ./core/PhysiCell_rules_extended.cpp
 	$(COMPILE_COMMAND) -c ./core/PhysiCell_rules_extended.cpp 
 
@@ -523,34 +599,41 @@ PhysiCell_MultiCellDS.o: ./modules/PhysiCell_MultiCellDS.cpp
 
 PhysiCell_various_outputs.o: ./modules/PhysiCell_various_outputs.cpp
 	$(COMPILE_COMMAND) -c ./modules/PhysiCell_various_outputs.cpp
-	
+
 PhysiCell_pugixml.o: ./modules/PhysiCell_pugixml.cpp
 	$(COMPILE_COMMAND) -c ./modules/PhysiCell_pugixml.cpp
 	
 PhysiCell_settings.o: ./modules/PhysiCell_settings.cpp
-	$(COMPILE_COMMAND) -c ./modules/PhysiCell_settings.cpp	
+	$(COMPILE_COMMAND) -c ./modules/PhysiCell_settings.cpp
 	
-PhysiCell_basic_signaling.o: ./core/PhysiCell_basic_signaling.cpp
-	$(COMPILE_COMMAND) -c ./core/PhysiCell_basic_signaling.cpp 
-
-PhysiCell_geometry.o: ./modules/PhysiCell_geometry.cpp
-	$(COMPILE_COMMAND) -c ./modules/PhysiCell_geometry.cpp 
-
 # user-defined PhysiCell modules
+
+libRoadrunner: 
+ifeq ($(OS), Windows_NT)
+	python beta/setup_libroadrunner.py
+else
+	python3 beta/setup_libroadrunner.py
+endif
+
+custom.o: ./custom_modules/custom.cpp 
+	$(COMPILE_COMMAND) -c ./custom_modules/custom.cpp
+
+librr_intracellular.o: ./addons/libRoadrunner/src/librr_intracellular.cpp ./addons/libRoadrunner/src/librr_intracellular.h
+	$(COMPILE_COMMAND) -c ./addons/libRoadrunner/src/librr_intracellular.cpp
 
 # cleanup
 
 reset:
-	rm -f *.cpp PhysiCell_cell.o
+	rm -f *.cpp 
 	cp ./sample_projects/Makefile-default Makefile 
-	rm -rf ./custom_modules/*
+	rm -f ./custom_modules/*
 	touch ./custom_modules/empty.txt 
 	touch ALL_CITATIONS.txt 
 	touch ./core/PhysiCell_cell.cpp
 	rm ALL_CITATIONS.txt 
 	cp ./config/PhysiCell_settings-backup.xml ./config/PhysiCell_settings.xml 
 	touch ./config/empty.csv
-	rm ./config/*.csv	
+	rm -f ./config/*.csv
 	
 clean:
 	rm -f *.o
@@ -560,9 +643,9 @@ data-cleanup:
 	rm -rf ./output
 	mkdir ./output
 	touch ./output/empty.txt
-
+	
 # archival 
-
+	
 checkpoint: 
 	zip -r $$(date +%b_%d_%Y_%H%M).zip Makefile *.cpp *.h config/*.xml custom_modules/* 
 	
@@ -647,15 +730,15 @@ save:
 	cp main.cpp ./user_projects/$(PROJ)
 	cp Makefile ./user_projects/$(PROJ)
 	cp VERSION.txt ./user_projects/$(PROJ)
-	cp -r ./config/* ./user_projects/$(PROJ)/config
-	cp -r ./custom_modules/* ./user_projects/$(PROJ)/custom_modules
+	cp ./config/* ./user_projects/$(PROJ)/config
+	cp ./custom_modules/* ./user_projects/$(PROJ)/custom_modules
 
 load: 
 	echo "Loading project from $(PROJ) ... "
 	cp ./user_projects/$(PROJ)/main.cpp .
 	cp ./user_projects/$(PROJ)/Makefile .
-	cp -r ./user_projects/$(PROJ)/config/* ./config/ 
-	cp -r ./user_projects/$(PROJ)/custom_modules/* ./custom_modules/ 
+	cp ./user_projects/$(PROJ)/config/* ./config/ 
+	cp ./user_projects/$(PROJ)/custom_modules/* ./custom_modules/ 
 
 pack:
 	@echo " "
