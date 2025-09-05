@@ -141,14 +141,21 @@ void setup_signal_behavior_dictionaries( void )
 
         map_index++; 
 	}    
-	
+
+	// current cycle phase index
+	signal_to_int["current cycle phase"] = map_index;
+	int_to_signal[map_index] = "current cycle phase";
+	// synonyms
+	signal_to_int["current cycle phase index"] = map_index;
+	signal_to_int["cycle phase"] = map_index;
+	signal_to_int["cycle phase index"] = map_index;
+
 	// mechanical pressure 
-	// int map_index = m; 
+	map_index++;
 	signal_to_int[ "pressure"] = map_index; 
 	int_to_signal[map_index] = "pressure"; 
 
 	// total volume 
-
 	map_index++; 
 	signal_to_int[ "volume"] = map_index; 
 	int_to_signal[map_index] = "volume"; 
@@ -207,6 +214,16 @@ void setup_signal_behavior_dictionaries( void )
 	int_to_signal[map_index] = "contact with basement membrane"; 
 	// synonym
 	signal_to_int["contact with BM"] = map_index; 
+
+	// number of attachments
+	map_index++;
+	signal_to_int["number of attachments"] = map_index;
+	int_to_signal[map_index] = "number of attachments";
+
+	// number of spring attachments
+	map_index++;
+	signal_to_int["number of spring attachments"] = map_index;
+	int_to_signal[map_index] = "number of spring attachments";
 	
 	// damage state 
 
@@ -524,7 +541,6 @@ void setup_signal_behavior_dictionaries( void )
 		behavior_to_int[temp] = map_index; 
 		int_to_behavior[map_index] = temp; 
 
-
 		// synonym 
 		temp = "transform to cell type " + std::to_string(pCD->type); 
 		behavior_to_int[temp] = map_index; 
@@ -534,9 +550,7 @@ void setup_signal_behavior_dictionaries( void )
 
 		temp = "transition to cell type " + std::to_string(pCD->type); 
 		behavior_to_int[temp] = map_index; 
-
-
-	}	
+	}
 
 	// asymmetric division (this remains necessary even with extended asym div because this item implicitly uses the current cell type name, meaning the index depends on the cell using this rule)
 	for( int i=0; i < n ; i++ )
@@ -677,17 +691,8 @@ void display_signal_dictionary( std::ostream& os )
 void display_signal_dictionary( void )
 { display_signal_dictionary( std::cout); std::cout << std::endl; }
 
-
 void display_signal_dictionary_with_synonyms( void )
 { display_signal_dictionary_with_synonyms( std::cout ); }
-/*
-	std::cout << "Signals (with synonyms): " << std::endl 
-			  << "=======================" << std::endl; 
-	for( auto it = signal_to_int.begin() ; it != signal_to_int.end() ; it++ )
-	{ std::cout << it->second << " : " << it->first << std::endl; }
-	std::cout << std::endl << std::endl;  	
-    return; 
-*/
 
 void display_signal_dictionary_with_synonyms( std::ostream& os )
 {
@@ -728,24 +733,14 @@ void display_behavior_dictionary_with_synonyms( std::ostream& os )
 
 void display_behavior_dictionary_with_synonyms( void )
 { display_behavior_dictionary_with_synonyms( std::cout ); return; }
-/*
-	std::cout << "Behaviors (with synonyms): " << std::endl 
-			  << "=========================" << std::endl; 
-	for( auto it = behavior_to_int.begin() ; it != behavior_to_int.end() ; it++ )
-	{ std::cout << it->second << " : " << it->first << std::endl; }
-	std::cout << std::endl << std::endl;  	
-    return; 
-*/	
 
 int find_signal_index( std::string signal_name )
 {
 	auto search = signal_to_int.find( signal_name );
 	// safety first! 
 	if( search != signal_to_int.end() )
-    { return search->second; }   
-
-	std::cout << "having trouble finding " << signal_name << std::endl; 
-
+    { return search->second; }
+	
     return -1; 
 }
 
@@ -812,6 +807,10 @@ std::vector<double> get_signals( Cell* pCell )
 	for( int i=0; i < m ; i++ )
 	{ signals[start_substrate_grad_ind+i] = norm( pCell->nearest_gradient(i) ); }    
 
+	// current cycle phase
+	static int cycle_phase_ind = find_signal_index( "cycle phase" );
+	signals[cycle_phase_ind] = pCell->phenotype.cycle.data.current_phase_index;
+
 	// mechanical pressure 
 	static int pressure_ind = find_signal_index( "pressure"); 
 	signals[pressure_ind] = pCell->state.simple_pressure;
@@ -873,6 +872,14 @@ std::vector<double> get_signals( Cell* pCell )
 	// physical contact with basement membrane (not implemented) 
 	static int BM_contact_ind = find_signal_index( "contact with basement membrane"); 
 	signals[BM_contact_ind] = (int) pCell->state.contact_with_basement_membrane; 
+
+	// number of attachments
+	static int num_attachments_ind = find_signal_index( "number of attachments"); 
+	signals[num_attachments_ind] = pCell->state.attached_cells.size();
+
+	// number of spring attachments
+	static int num_spring_attachments_ind = find_signal_index( "number of spring attachments"); 
+	signals[num_spring_attachments_ind] = pCell->state.spring_attachments.size();
 
 	// damage
 	static int damage_ind = find_signal_index( "damage"); 
@@ -1061,6 +1068,15 @@ double get_single_signal( Cell* pCell, int index )
 		return out; 
 	}
 
+	// current cycle phase 
+	static int cycle_phase_ind = find_signal_index( "cycle phase" ); 
+	if( index == cycle_phase_ind )
+	{
+		out = pCell->phenotype.cycle.data.current_phase_index;
+		out /= signal_scales[index]; 
+		return out; 
+	}
+	
 	// mechanical pressure 
 	static int pressure_ind = find_signal_index( "pressure" ); 
 	if( index == pressure_ind )
@@ -1169,6 +1185,24 @@ double get_single_signal( Cell* pCell, int index )
 		out /= signal_scales[index]; 
 		return out; 
 	} 
+
+	// number of attachments
+	static int num_attachments_ind = find_signal_index( "number of attachments"); 
+	if( index == num_attachments_ind )
+	{
+		out = pCell->state.attached_cells.size(); 
+		out /= signal_scales[index]; 
+		return out;
+	}
+
+	// number of spring attachments
+	static int num_spring_attachments_ind = find_signal_index( "number of spring attachments"); 
+	if( index == num_spring_attachments_ind )
+	{
+		out = pCell->state.spring_attachments.size(); 
+		out /= signal_scales[index]; 
+		return out;
+	}
 
 	// damage
 	static int damage_ind = find_signal_index( "damage"); 
@@ -2878,5 +2912,4 @@ std::vector<double> get_base_behaviors( Cell* pCell , std::vector<std::string> n
 	{ parameters[n] = get_single_base_behavior(pCell,names[n]); }
 	return parameters; 
 }
-
 };

@@ -76,6 +76,7 @@
 #include <random>
 #include <chrono>
 #include <unordered_map>
+#include <getopt.h>
 
 #include "./PhysiCell_pugixml.h"
 #include "../BioFVM/BioFVM.h"
@@ -89,8 +90,8 @@ namespace PhysiCell{
  	
 extern pugi::xml_node physicell_config_root; 
 
-bool read_PhysiCell_config_file( std::string filename );
-bool load_PhysiCell_config_file( std::string filename  );
+bool read_PhysiCell_config_file( void );
+bool load_PhysiCell_config_file( void );
 
 class PhysiCell_Settings
 {
@@ -132,6 +133,9 @@ class PhysiCell_Settings
 	bool rules_enabled = false; 
 	std::string rules_protocol = "Cell Behavior Hypothesis Grammar (CBHG)"; 
 	std::string rules_protocol_version = "1.0"; 
+
+	// ecm option
+	bool ecm_enabled = false;
 	
 	PhysiCell_Settings();
 	
@@ -235,6 +239,30 @@ extern User_Parameters parameters;
 bool setup_microenvironment_from_XML( pugi::xml_node root_node );
 bool setup_microenvironment_from_XML( void );
 
+class ArgumentParser {
+public:
+	bool config_file_flagged = false;
+	std::string path_to_config_file = "./config/PhysiCell_settings.xml";
+	std::string path_to_ic_cells_file = "";
+	std::string path_to_ic_substrate_file = "";
+	std::string path_to_ic_ecm_file = "";
+	std::string path_to_ic_dc_file = "";
+	std::string path_to_rules_file = "";
+	std::string path_to_intracellular_mappings_file = "";
+	std::string path_to_output_folder = "";
+
+    void parse(int argc, char* argv[]);
+
+	ArgumentParser() {};
+
+	bool read_intracellular_files(pugi::xml_node& node_config_intracellular, const std::string &cell_definition, const std::string &intracellular_type);
+
+	void print_usage(std::ostream& os, const char* program_name);
+};
+
+extern ArgumentParser argument_parser;
+
+void set_intracellular_files(pugi::xml_node &node_config_intracellular, const pugi::xml_node &node_this_intracellular, const std::string &base_path_to_filename, const std::string &intracellular_type);
 }
 
 #endif 

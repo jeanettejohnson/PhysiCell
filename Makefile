@@ -42,7 +42,7 @@ BioFVM_utilities.o BioFVM_basic_agent.o BioFVM_MultiCellDS.o BioFVM_agent_contai
 
 PhysiCell_core_OBJECTS := PhysiCell_phenotype.o PhysiCell_cell_container.o PhysiCell_standard_models.o \
 PhysiCell_cell.o PhysiCell_custom.o PhysiCell_utilities.o PhysiCell_constants.o PhysiCell_basic_signaling.o \
-PhysiCell_signal_behavior.o PhysiCell_rules.o
+PhysiCell_signal_behavior.o PhysiCell_rules_extended.o
 
 PhysiCell_module_OBJECTS := PhysiCell_SVG.o PhysiCell_pathology.o PhysiCell_MultiCellDS.o PhysiCell_various_outputs.o \
 PhysiCell_pugixml.o PhysiCell_settings.o PhysiCell_geometry.o
@@ -75,9 +75,11 @@ list-projects:
 	@echo "                 celltypes3-sample heterogeneity-sample pred-prey-farmer virus-macrophage-sample"
 	@echo "                 worm-sample interaction-sample mechano-sample rules-sample physimess-sample custom-division-sample"
 	@echo "                 asymmetric-division-sample extended-asym-div-sample immune-function-sample episode-sample"
+	@echo "					template-ecm template-xml-rules template-xml-rules-extended"
 	@echo ""
 	@echo "Sample intracellular projects: template_BM ode-energy-sample physiboss-cell-lines-sample"
 	@echo "                 cancer-metabolism-sample physiboss-tutorial physiboss-tutorial-invasion"
+	@echo "                 template-combined-intras"
 	@echo ""
 	
 template:
@@ -87,7 +89,34 @@ template:
 	cp Makefile Makefile-backup
 	cp ./sample_projects/template/Makefile .
 	cp -r ./sample_projects/template/config/* ./config 
-	
+
+template-ecm:
+	cp -r ./sample_projects/template-ecm/custom_modules/* ./custom_modules/
+	touch main.cpp && cp main.cpp main-backup.cpp
+	cp ./sample_projects/template-ecm/main.cpp ./main.cpp 
+	cp Makefile Makefile-backup
+	cp ./sample_projects/template-ecm/Makefile .
+	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml 
+	cp -r ./sample_projects/template-ecm/config/* ./config/
+
+template-xml-rules:
+	cp -r ./sample_projects/template_xml_rules/custom_modules/* ./custom_modules/
+	touch main.cpp && cp main.cpp main-backup.cpp
+	cp ./sample_projects/template_xml_rules/main.cpp ./main.cpp 
+	cp Makefile Makefile-backup
+	cp ./sample_projects/template_xml_rules/Makefile .
+	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml 
+	cp -r ./sample_projects/template_xml_rules/config/* ./config/
+
+template-xml-rules-extended:
+	cp -r ./sample_projects/template_xml_rules_extended/custom_modules/* ./custom_modules/
+	touch main.cpp && cp main.cpp main-backup.cpp
+	cp ./sample_projects/template_xml_rules_extended/main.cpp ./main.cpp 
+	cp Makefile Makefile-backup
+	cp ./sample_projects/template_xml_rules_extended/Makefile .
+	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml 
+	cp -r ./sample_projects/template_xml_rules_extended/config/* ./config/
+
 # sample projects 
 
 # ---- non-intracellular projects 
@@ -244,6 +273,14 @@ extended-asym-div-sample:
 	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml 
 	cp -r ./sample_projects/extended_asym_div/config/* ./config/
 
+dirichlet-from-file-sample:
+	cp -r ./sample_projects/dirichlet_from_file/custom_modules/* ./custom_modules/
+	touch main.cpp && cp main.cpp main-backup.cpp
+	cp ./sample_projects/dirichlet_from_file/main.cpp ./main.cpp 
+	cp Makefile Makefile-backup
+	cp ./sample_projects/dirichlet_from_file/Makefile .
+	cp -r ./sample_projects/dirichlet_from_file/config/* ./config 
+
 # ---- intracellular projects 
 ode-energy-sample:
 	cp ./sample_projects_intracellular/ode/ode_energy/custom_modules/* ./custom_modules/
@@ -281,6 +318,15 @@ physiboss-tutorial-invasion:
 	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml 
 	cp -r ./sample_projects_intracellular/boolean/cancer_invasion/config/* ./config/
 
+template-combined-intras:
+	cp ./sample_projects_intracellular/combined/template-combined/custom_modules/* ./custom_modules/
+	touch main.cpp && cp main.cpp main-backup.cpp
+	cp ./sample_projects_intracellular/combined/template-combined/main.cpp ./main.cpp 
+	cp Makefile Makefile-backup
+	cp ./sample_projects_intracellular/combined/template-combined/Makefile .
+	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml 
+	cp -r ./sample_projects_intracellular/combined/template-combined/config/* ./config/
+
 ecoli-acetic-switch-sample:
 	cp ./sample_projects_intracellular/fba/ecoli_acetic_switch/custom_modules/* ./custom_modules/
 	touch main.cpp && cp main.cpp main-backup.cpp
@@ -309,6 +355,79 @@ template_BM:
 	cp -r ./sample_projects_intracellular/boolean/template_BM/config/* ./config/
 	mkdir ./scripts/
 	cp ./sample_projects_intracellular/boolean/template_BM/scripts/* ./scripts/
+	
+# ---- PhysiPKPD examples
+pkpd-proliferation-sample:
+	cp ./sample_projects_physipkpd/moa_proliferation/custom_modules/* ./custom_modules/
+	touch main.cpp && cp main.cpp main-backup.cpp
+	cp ./sample_projects_physipkpd/moa_proliferation/main.cpp ./main.cpp
+	cp Makefile Makefile-backup
+	cp ./sample_projects_physipkpd/moa_proliferation/Makefile .
+	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml
+	cp ./sample_projects_physipkpd/moa_proliferation/config/* ./config/
+
+pkpd-apoptosis-sample:
+	cp ./sample_projects_physipkpd/moa_apoptosis/custom_modules/* ./custom_modules/
+	touch main.cpp && cp main.cpp main-backup.cpp
+	cp ./sample_projects_physipkpd/moa_apoptosis/main.cpp ./main.cpp
+	cp Makefile Makefile-backup
+	cp ./sample_projects_physipkpd/moa_apoptosis/Makefile .
+	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml
+	cp ./sample_projects_physipkpd/moa_apoptosis/config/* ./config/
+
+pkpd-necrosis-sample:
+	cp ./sample_projects_physipkpd/moa_necrosis/custom_modules/* ./custom_modules/
+	touch main.cpp && cp main.cpp main-backup.cpp
+	cp ./sample_projects_physipkpd/moa_necrosis/main.cpp ./main.cpp
+	cp Makefile Makefile-backup
+	cp ./sample_projects_physipkpd/moa_necrosis/Makefile .
+	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml
+	cp ./sample_projects_physipkpd/moa_necrosis/config/* ./config/
+
+pkpd-motility-sample:
+	cp ./sample_projects_physipkpd/moa_motility/custom_modules/* ./custom_modules/
+	touch main.cpp && cp main.cpp main-backup.cpp
+	cp ./sample_projects_physipkpd/moa_motility/main.cpp ./main.cpp
+	cp Makefile Makefile-backup
+	cp ./sample_projects_physipkpd/moa_motility/Makefile .
+	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml
+	cp ./sample_projects_physipkpd/moa_motility/config/* ./config/
+
+pkpd-combo-sample:
+	cp ./sample_projects_physipkpd/combo/custom_modules/* ./custom_modules/
+	touch main.cpp && cp main.cpp main-backup.cpp
+	cp ./sample_projects_physipkpd/combo/main.cpp ./main.cpp
+	cp Makefile Makefile-backup
+	cp ./sample_projects_physipkpd/combo/Makefile .
+	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml
+	cp ./sample_projects_physipkpd/combo/config/* ./config/
+
+pkpd-confluence-start-sample:
+	cp ./sample_projects_physipkpd/confluence_start/custom_modules/* ./custom_modules/
+	touch main.cpp && cp main.cpp main-backup.cpp
+	cp ./sample_projects_physipkpd/confluence_start/main.cpp ./main.cpp
+	cp Makefile Makefile-backup
+	cp ./sample_projects_physipkpd/confluence_start/Makefile .
+	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml
+	cp ./sample_projects_physipkpd/confluence_start/config/* ./config/
+	
+pkpd-template:
+	cp ./sample_projects_physipkpd/template_pkpd/custom_modules/* ./custom_modules/
+	touch main.cpp && cp main.cpp main-backup.cpp
+	cp ./sample_projects_physipkpd/template_pkpd/main.cpp ./main.cpp
+	cp Makefile Makefile-backup
+	cp ./sample_projects_physipkpd/template_pkpd/Makefile .
+	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml
+	cp ./sample_projects_physipkpd/template_pkpd/config/* ./config/
+	
+pkpd-template-sbml:
+	cp ./sample_projects_physipkpd/template_pkpd_sbml/custom_modules/* ./custom_modules/
+	touch main.cpp && cp main.cpp main-backup.cpp
+	cp ./sample_projects_physipkpd/template_pkpd_sbml/main.cpp ./main.cpp
+	cp Makefile Makefile-backup
+	cp ./sample_projects_physipkpd/template_pkpd_sbml/Makefile .
+	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml
+	cp ./sample_projects_physipkpd/template_pkpd_sbml/config/* ./config/
 
 # early examples for convergence testing 
 
@@ -367,8 +486,8 @@ PhysiCell_constants.o: ./core/PhysiCell_constants.cpp
 PhysiCell_signal_behavior.o: ./core/PhysiCell_signal_behavior.cpp
 	$(COMPILE_COMMAND) -c ./core/PhysiCell_signal_behavior.cpp 
 
-PhysiCell_rules.o: ./core/PhysiCell_rules.cpp
-	$(COMPILE_COMMAND) -c ./core/PhysiCell_rules.cpp 
+PhysiCell_rules_extended.o: ./core/PhysiCell_rules_extended.cpp
+	$(COMPILE_COMMAND) -c ./core/PhysiCell_rules_extended.cpp 
 
 # BioFVM core components (needed by PhysiCell)
 	

@@ -68,12 +68,11 @@
 #include <vector>
 #include <string>
 
+
 #ifndef __PhysiCell_signal_response__
 #define __PhysiCell_signal_response__
 
-#include "./PhysiCell_constants.h" 
-#include "./PhysiCell_phenotype.h" 
-#include "./PhysiCell_cell.h" 
+#include "../core/PhysiCell.h"
 
 namespace PhysiCell{
 
@@ -97,8 +96,6 @@ void display_signal_dictionary_with_synonyms( void ); // done
 void display_behavior_dictionary_with_synonyms( void ); // done 
 void display_signal_dictionary_with_synonyms( std::ostream& os ); // done 
 void display_behavior_dictionary_with_synonyms( std::ostream& os ); // done 
-
-
 
 /* signal functions */ 
 
@@ -177,7 +174,6 @@ double get_single_base_behavior( Cell* pCell , int index ); // done
 double get_single_base_behavior( Cell* pCell , std::string name ); // done 
 
 double get_single_base_behavior( Cell_Definition* pCD , std::string name ); 
-
 
 }; 
 

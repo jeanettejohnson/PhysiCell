@@ -168,6 +168,8 @@ Cell_Definition::Cell_Definition()
 	// bug fix July 31 2023
 	
 	functions.set_orientation = NULL;
+
+	functions.response_to_ecm = NULL;
 	
 	// new March 2022 : make sure Cell_Interactions and Cell_Transformations 
 	// 					are appropriately sized. Same on motiltiy. 
@@ -261,8 +263,11 @@ void Cell::update_motility_vector( double dt_ )
 		phenotype.motility.motility_vector.assign( 3, 0.0 ); 
 		return; 
 	}
-	
-	if( UniformRandom() < dt_ / phenotype.motility.persistence_time || phenotype.motility.persistence_time < dt_ )
+
+	static bool is_first_time = true;
+	is_first_time &= PhysiCell_globals.current_time == 0; // is_first_time starts true; switches to false the first time the current time is !=0 here; then stays false forever
+
+	if(is_first_time || UniformRandom() < dt_ / phenotype.motility.persistence_time || phenotype.motility.persistence_time < dt_ )
 	{
 		/*
 		// choose a uniformly random unit vector 
@@ -320,7 +325,7 @@ void Cell::advance_bundled_phenotype_functions( double dt_ )
 	// New March 2023 in Version 1.12.0 
 	// call the rules-based code to update the phenotype 
 	if( PhysiCell_settings.rules_enabled )
-	{ apply_ruleset( this ); }
+	{ apply_behavior_ruleset( this ); }
 	if( get_single_signal(this,"necrotic") > 0.5 )
 	{
 		double rupture = this->phenotype.volume.rupture_volume; 
@@ -821,7 +826,8 @@ void Cell::turn_off_reactions(double dt)
 		phenotype.secretion.secretion_rates[i] = 0.0; 
 		phenotype.secretion.net_export_rates[i] = 0.0; 
 	}
-	set_internal_uptake_constants(dt);
+	// set_internal_uptake_constants(dt);
+	set_volume_is_changed(true);
 	
 	return; 
 }
@@ -1071,7 +1077,6 @@ void Cell::add_potentials(Cell* other_agent)
 Cell* create_cell( Cell* (*custom_instantiate)())
 {
 	Cell* pNew; 
-	
 	if (custom_instantiate) {
 		pNew = custom_instantiate();
 	} else {
@@ -1120,8 +1125,8 @@ Cell* create_cell( Cell_Definition& cd )
 	
 	pNew->assign_orientation();
 	
-	pNew->set_total_volume( pNew->phenotype.volume.total ); 
-	
+	pNew->set_total_volume( pNew->phenotype.volume.total );
+
 	return pNew; 
 }
 
@@ -1702,7 +1707,7 @@ void prebuild_cell_definition_index_maps( void )
 		node = node.next_sibling( "cell_definition" ); 
 		n++; 
 	}	
-	
+
 	return; 
 }
 
@@ -2350,7 +2355,6 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 	// otherwise, modify properties of that model 
 	
 	// set up the death models 
-//	int death_model_index = 0; 
 	node = cd_node.child( "phenotype" );
 	node = node.child( "death" ); 
 	if( node )
@@ -2444,9 +2448,6 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 				if( node_temp )
 				{ death_params.lysed_fluid_change_rate = xml_get_my_double_value( node_temp ); }
 
-	//			death_params.time_units = 
-	//				get_string_attribute_value( node, "unlysed_fluid_change_rate", "units" ); 
-				
 				node = node.parent(); 
 			}
 					
@@ -2454,7 +2455,6 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 			// if the model already exists, just overwrite the parameters 
             if (model == PhysiCell_constants::apoptosis_death_model) 
             {
-//					pCD->phenotype.death.add_death_model( rate , &apoptosis , apoptosis_parameters );
                 if( death_model_already_exists == false )
                 {
                     pCD->phenotype.death.add_death_model( rate , &apoptosis , death_params ); 
@@ -2469,7 +2469,6 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
             else if (model == PhysiCell_constants::necrosis_death_model) 
             {
                 // set necrosis parameters 
-//					pCD->phenotype.death.add_death_model( rate , &necrosis , necrosis_parameters );
                 if( death_model_already_exists == false )
                 {
                     pCD->phenotype.death.add_death_model( rate , &necrosis , death_params ); 
@@ -2914,7 +2913,17 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 	if( node )
 	{
 		Secretion* pS = &(pCD->phenotype.secretion);
-		
+
+		pugi::xml_attribute attr = node.attribute("model");
+		std::string model = "default";
+		pS->set_advancer(&Secretion::default_advancer);
+		if (attr)
+		{
+			model = attr.value();
+			if (model == "transmembrane_diffusion")
+			{ pS->set_advancer(&Secretion::transmembrane_diffusion_advancer); }
+		}
+
 		// find the first substrate 
 		pugi::xml_node node_sec = node.child( "substrate" );
 		while( node_sec )
@@ -2933,12 +2942,25 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 				<< "       Please double-check your substrate name in the config file." << std::endl << std::endl; 
 				exit(-1); 
 			}			
+
+
 	
 			// secretion rate
 			pugi::xml_node node_sec1 = node_sec.child( "secretion_rate" ); 
 			if( node_sec1 )
 			{ pS->secretion_rates[index] = xml_get_my_double_value( node_sec1 ); }
 			
+			// net export rate 
+			node_sec1 = node_sec.child( "net_export_rate" ); 
+			if( node_sec1 )
+			{ pS->net_export_rates[index] = xml_get_my_double_value( node_sec1 ); }
+			
+			// could skip secretion_target and uptake_rate if using transmembrane_diffusion
+			if (model == "transmembrane_diffusion") {
+				node_sec = node_sec.next_sibling( "substrate" ); 
+				continue;
+			}
+
 			// secretion target 
 			node_sec1 = node_sec.child( "secretion_target" ); 
 			if( node_sec1 )
@@ -2948,11 +2970,6 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 			node_sec1 = node_sec.child( "uptake_rate" ); 
 			if( node_sec1 )
 			{ pS->uptake_rates[index] = xml_get_my_double_value( node_sec1 ); }
-			
-			// net export rate 
-			node_sec1 = node_sec.child( "net_export_rate" ); 
-			if( node_sec1 )
-			{ pS->net_export_rates[index] = xml_get_my_double_value( node_sec1 ); }
 			
 			node_sec = node_sec.next_sibling( "substrate" ); 
 		}
@@ -2974,11 +2991,7 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 			// pCI->dead_phagocytosis_rate = xml_get_my_double_value(node_dpr); 
 			dead_phagocytosis_rate = xml_get_my_double_value(node_dpr); 
 		}
-/*
-		pCI->apoptotic_phagocytosis_rate = pCI->dead_phagocytosis_rate; 
-		pCI->necrotic_phagocytosis_rate = pCI->dead_phagocytosis_rate; 
-		pCI->other_dead_phagocytosis_rate = pCI->dead_phagocytosis_rate; 
-*/
+
 		pCI->apoptotic_phagocytosis_rate = dead_phagocytosis_rate; 
 		pCI->necrotic_phagocytosis_rate = dead_phagocytosis_rate; 
 		pCI->other_dead_phagocytosis_rate = dead_phagocytosis_rate; 
@@ -3153,66 +3166,16 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 
 	node = cd_node.child( "phenotype" );
 
-		// intracellular
+	// intracellular
 	node = cd_node.child( "phenotype" );
-	node = node.child( "intracellular" ); 
-	if( node )
+	node = node.child("intracellular");
+	if (node)
 	{
-		std::string model_type = node.attribute( "type" ).value(); 
-		
-
-#ifdef ADDON_PHYSIBOSS
-		if (model_type == "maboss") {
-			// If it has already be copied
-			if (pParent != NULL && pParent->phenotype.intracellular != NULL) {
-				pCD->phenotype.intracellular->initialize_intracellular_from_pugixml(node);
-				
-			// Otherwise we need to create a new one
-			} else {
-				MaBoSSIntracellular* pIntra = new MaBoSSIntracellular(node);
-				pCD->phenotype.intracellular = pIntra->getIntracellularModel();
-			}
-		}
-#endif
-
-#ifdef ADDON_ROADRUNNER
-		if (model_type == "roadrunner") 
-        {
-			// If it has already be copied
-			if (pParent != NULL && pParent->phenotype.intracellular != NULL) 
-            {
-                // std::cout << "------ " << __FUNCTION__ << ": copying another\n";
-				pCD->phenotype.intracellular->initialize_intracellular_from_pugixml(node);
-            }	
-			// Otherwise we need to create a new one
-			else 
-            {
-                std::cout << "\n------ " << __FUNCTION__ << ": creating new RoadRunnerIntracellular\n";
-				RoadRunnerIntracellular* pIntra = new RoadRunnerIntracellular(node);
-				pCD->phenotype.intracellular = pIntra->getIntracellularModel();
-                pCD->phenotype.intracellular->validate_PhysiCell_tokens(pCD->phenotype);
-                pCD->phenotype.intracellular->validate_SBML_species();
-			}
-		}
-#endif
-
-#ifdef ADDON_PHYSIDFBA
-		if (model_type == "dfba") {
-			// If it has already be copied
-			if (pParent != NULL && pParent->phenotype.intracellular != NULL) {
-				pCD->phenotype.intracellular->initialize_intracellular_from_pugixml(node);
-			// Otherwise we need to create a new one
-			} else {
-				dFBAIntracellular* pIntra = new dFBAIntracellular(node);
-				pCD->phenotype.intracellular = pIntra->getIntracellularModel();
-			}
-		}
-#endif
-
-	} else{
-
+		parse_intracellular_model(node, pCD, pParent);
+	}
+	else
+	{
 		pCD->phenotype.intracellular = NULL;
-
 	}
 
 	// set up custom data 
@@ -3270,8 +3233,115 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 		// set conserved attribute 
 		node1 = node1.next_sibling(); 
 	}
-	
+
+	node = cd_node.child( "ecm_interactions" );
+	if (PhysiCell_settings.ecm_enabled && node && node.attribute("enabled").as_bool())
+	{
+#ifdef ADDON_PHYSIECM
+		std::string model_type = node.attribute("type").value();
+		if (model_type == "v1")
+		{
+			initialize_ecm_interactions_v1(node, pCD);
+		}
+		else if (model_type == "v2")
+		{
+			initialize_ecm_interactions_v2(node, pCD);
+		}
+		else
+		{
+			std::cout << "ERROR: ECM interactions type " << model_type << " is not supported." << std::endl;
+			exit(-1);
+		}
+		pCD->functions.update_velocity = ecm_based_update_cell_velocity;
+		check_ecm_remodel_parameters_provided(node, pCD);
+#else
+		std::cout << "ERROR: ECM interactions are not supported in this build." << std::endl << 
+		"\tMake sure to compile with the -D ADDON_PHYSIECM flag." << std::endl;
+		exit(-1);
+#endif
+	}
+
 	return pCD;
+}
+
+void parse_intracellular_model(pugi::xml_node node, Cell_Definition* pCD, Cell_Definition* pParent)
+{
+	std::string model_type = node.attribute( "type" ).value(); 
+	bool uses_intracellular = argument_parser.read_intracellular_files(node, pCD->name, model_type);
+	if (!uses_intracellular) {
+		return;
+	}
+
+	if (model_type == "maboss")
+	{
+#ifdef ADDON_PHYSIBOSS
+		// If it has already be copied
+		if (pParent != NULL && pParent->phenotype.intracellular != NULL)
+		{
+			pCD->phenotype.intracellular->initialize_intracellular_from_pugixml(node);
+
+			// Otherwise we need to create a new one
+		}
+		else
+		{
+			MaBoSSIntracellular *pIntra = new MaBoSSIntracellular(node);
+			pCD->phenotype.intracellular = pIntra->getIntracellularModel();
+		}
+#else
+		std::cerr << "ERROR: MaBoSS intracellular model is not supported in this build." << std::endl
+				  << "\tMake sure to compile with the -D ADDON_PHYSIBOSS flag." << std::endl;
+		exit(-1);
+#endif
+	}
+
+	else if (model_type == "roadrunner")
+	{
+#ifdef ADDON_ROADRUNNER
+		// If it has already be copied
+		if (pParent != NULL && pParent->phenotype.intracellular != NULL)
+		{
+			pCD->phenotype.intracellular->initialize_intracellular_from_pugixml(node);
+		}
+		// Otherwise we need to create a new one
+		else
+		{
+			RoadRunnerIntracellular *pIntra = new RoadRunnerIntracellular(node);
+			pCD->phenotype.intracellular = pIntra->getIntracellularModel();
+		}
+		pCD->phenotype.intracellular->validate_PhysiCell_tokens(pCD->phenotype);
+		pCD->phenotype.intracellular->validate_SBML_species();
+#else
+		std::cerr << "ERROR: RoadRunner intracellular model is not supported in this build." << std::endl
+				  << "\tMake sure to compile with the -D ADDON_ROADRUNNER flag." << std::endl;
+		exit(-1);
+#endif
+	}
+
+	else if (model_type == "dfba")
+	{
+#ifdef ADDON_PHYSIDFBA
+		// If it has already be copied
+		if (pParent != NULL && pParent->phenotype.intracellular != NULL)
+		{
+			pCD->phenotype.intracellular->initialize_intracellular_from_pugixml(node);
+			// Otherwise we need to create a new one
+		}
+		else
+		{
+			dFBAIntracellular *pIntra = new dFBAIntracellular(node);
+			pCD->phenotype.intracellular = pIntra->getIntracellularModel();
+		}
+#else
+		std::cerr << "ERROR: dFBA intracellular model is not supported in this build." << std::endl
+				  << "\tMake sure to compile with the -D ADDON_PHYSIDFBA flag." << std::endl;
+#endif
+	}
+
+	else
+	{
+		std::cerr << "ERROR: Intracellular model type " << model_type << " is not supported." << std::endl;
+		exit(-1);
+	}
 }
 
 void initialize_cell_definitions_from_pugixml( pugi::xml_node root )
