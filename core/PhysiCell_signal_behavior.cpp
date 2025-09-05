@@ -150,6 +150,14 @@ void setup_signal_behavior_dictionaries( void )
 	signal_to_int["cycle phase"] = map_index;
 	signal_to_int["cycle phase index"] = map_index;
 
+	// elapsed time in phase
+	map_index++;
+    signal_to_int["elapsed time in phase"] = map_index;
+	int_to_signal[map_index] = "elapsed time in phase";
+	// synonyms
+	signal_to_int["time elapsed in phase"] = map_index;
+	signal_to_int["phase time"] = map_index;
+
 	// mechanical pressure 
 	map_index++;
 	signal_to_int[ "pressure"] = map_index; 
@@ -832,6 +840,10 @@ std::vector<double> get_signals( Cell* pCell )
 	static int cycle_phase_ind = find_signal_index( "cycle phase" );
 	signals[cycle_phase_ind] = pCell->phenotype.cycle.data.current_phase_index;
 
+	// elapsed time in phase
+	static int cycle_phase_time = find_signal_index( "phase time" );
+	signals[cycle_phase_time] = pCell->phenotype.cycle.data.elapsed_time_in_phase;
+
 	// mechanical pressure 
 	static int pressure_ind = find_signal_index( "pressure"); 
 	signals[pressure_ind] = pCell->state.simple_pressure;
@@ -1098,6 +1110,15 @@ double get_single_signal( Cell* pCell, int index )
 		return out; 
 	}
 	
+	// elapsed time in phase
+	static int cycle_phase_time = find_signal_index( "phase time" ); 
+	if( index == cycle_phase_time )
+	{
+		out = pCell->phenotype.cycle.data.elapsed_time_in_phase;
+		out /= signal_scales[index]; 
+		return out; 
+	}
+
 	// mechanical pressure 
 	static int pressure_ind = find_signal_index( "pressure" ); 
 	if( index == pressure_ind )
