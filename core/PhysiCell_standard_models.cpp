@@ -761,7 +761,7 @@ void initialize_default_cell_definition( void )
 	cell_defaults.functions.set_orientation = NULL;
 
 	cell_defaults.functions.response_to_ecm = NULL;
-	
+
 	cell_defaults.functions.plot_agent_SVG = standard_agent_SVG;
 	cell_defaults.functions.plot_agent_legend = standard_agent_legend;
 	

@@ -170,7 +170,7 @@ Cell_Definition::Cell_Definition()
 	functions.set_orientation = NULL;
 
 	functions.response_to_ecm = NULL;
-	
+
 	// new March 2022 : make sure Cell_Interactions and Cell_Transformations 
 	// 					are appropriately sized. Same on motiltiy. 
 	phenotype.cell_interactions.sync_to_cell_definitions(); 
@@ -426,6 +426,8 @@ Cell::Cell()
 	
 	is_movable = true;
 	is_out_of_domain = false;
+	generation = 0;		// linaeage tracking from rheiland
+    parentID = -1;   // overridden in create_cell() and divide() linaeage tracing from rheiland
 	displacement.resize(3,0.0); // state? 
 	
 	assign_orientation();
@@ -574,6 +576,14 @@ Cell* Cell::divide( )
 	
 	Cell* child = create_cell(functions.instantiate_cell);
 	child->copy_data( this );	
+	// lineage tracking from rheiland
+    generation = generation + 1;     // this (parent) cell has its generation incremented
+    child->generation = generation;  // daughter cell has the same generation
+    // child->generation = generation + 1;
+    // child->parentID = parentID;
+    parentID = ID;
+    child->parentID = ID;
+	// end lineage tracking
 	child->copy_function_pointers(this);
 	child->parameters = parameters;
 	
@@ -1082,7 +1092,7 @@ Cell* create_cell( Cell* (*custom_instantiate)())
 	} else {
 		pNew = standard_instantiate_cell();
 	}
-	
+	pNew->parentID = pNew->ID; // lineage tracking from rheiland
 	(*all_cells).push_back( pNew ); 
 	pNew->index=(*all_cells).size()-1;
 	
@@ -2942,19 +2952,17 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 				<< "       Please double-check your substrate name in the config file." << std::endl << std::endl; 
 				exit(-1); 
 			}			
-
-
 	
 			// secretion rate
 			pugi::xml_node node_sec1 = node_sec.child( "secretion_rate" ); 
 			if( node_sec1 )
 			{ pS->secretion_rates[index] = xml_get_my_double_value( node_sec1 ); }
-			
+
 			// net export rate 
 			node_sec1 = node_sec.child( "net_export_rate" ); 
 			if( node_sec1 )
 			{ pS->net_export_rates[index] = xml_get_my_double_value( node_sec1 ); }
-			
+
 			// could skip secretion_target and uptake_rate if using transmembrane_diffusion
 			if (model == "transmembrane_diffusion") {
 				node_sec = node_sec.next_sibling( "substrate" ); 
@@ -2965,12 +2973,12 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 			node_sec1 = node_sec.child( "secretion_target" ); 
 			if( node_sec1 )
 			{ pS->saturation_densities[index] = xml_get_my_double_value( node_sec1 ); }
-	
+
 			// uptake rate 
 			node_sec1 = node_sec.child( "uptake_rate" ); 
 			if( node_sec1 )
 			{ pS->uptake_rates[index] = xml_get_my_double_value( node_sec1 ); }
-			
+
 			node_sec = node_sec.next_sibling( "substrate" ); 
 		}
 	}	
@@ -2991,7 +2999,6 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 			// pCI->dead_phagocytosis_rate = xml_get_my_double_value(node_dpr); 
 			dead_phagocytosis_rate = xml_get_my_double_value(node_dpr); 
 		}
-
 		pCI->apoptotic_phagocytosis_rate = dead_phagocytosis_rate; 
 		pCI->necrotic_phagocytosis_rate = dead_phagocytosis_rate; 
 		pCI->other_dead_phagocytosis_rate = dead_phagocytosis_rate; 
