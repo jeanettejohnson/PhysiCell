@@ -759,7 +759,9 @@ void initialize_default_cell_definition( void )
 	cell_defaults.functions.calculate_distance_to_membrane = NULL; 
 	
 	cell_defaults.functions.set_orientation = NULL;
-	
+
+	cell_defaults.functions.response_to_ecm = NULL;
+
 	cell_defaults.functions.plot_agent_SVG = standard_agent_SVG;
 	cell_defaults.functions.plot_agent_legend = standard_agent_legend;
 	
@@ -779,7 +781,6 @@ void initialize_default_cell_definition( void )
 	//					these for the cell_defaults 
 	cell_defaults.phenotype.cell_interactions.sync_to_cell_definitions(); 
 	cell_defaults.phenotype.cell_transformations.sync_to_cell_definitions(); 
-	cell_defaults.phenotype.cycle.asymmetric_division.sync_to_cell_definitions();
 	cell_defaults.phenotype.motility.sync_to_current_microenvironment(); 
 	cell_defaults.phenotype.mechanics.sync_to_cell_definitions(); 
 	
@@ -1373,57 +1374,47 @@ void standard_cell_transformations( Cell* pCell, Phenotype& phenotype, double dt
 
 }
 
-void standard_asymmetric_division_function( Cell* pCell_parent, Cell* pCell_daughter )
+void asymmetric_division_function( Cell* pCell_parent, Cell* pCell_daughter )
 {
-	Cell_Definition* pCD_parent = cell_definitions_by_name[pCell_parent->type_name];
+	std::string parent_name = pCell_parent->type_name;
+	int parent_type = pCell_parent->type;
+	Cell_Definition* pCD_parent = cell_definitions_by_name[parent_name];
 	double total = pCell_parent->phenotype.cycle.asymmetric_division.probabilities_total();
 	if (total > 1.0)
 	{
-		double sym_div_prob = pCell_parent->phenotype.cycle.asymmetric_division.asymmetric_division_probabilities[pCell_parent->type] + 1.0 - total;
+		double sym_div_prob = pCell_parent->phenotype.cycle.asymmetric_division.asymmetric_division_probability(parent_type, parent_type) + 1.0 - total;
 		if (sym_div_prob < 0.0)
 		{ 
-			throw std::runtime_error("Error: Asymmetric division probabilities for " + pCD_parent->name + " sum to greater than 1.0 and cannot be normalized.");
+			std::cerr << "Error: Asymmetric division probabilities for " + pCD_parent->name + " sum to greater than 1.0 and cannot be normalized." << std::endl;
+			std::cerr << "Adjusted sym_div_prob = " << sym_div_prob << std::endl;
+			std::cerr << "List of all asym div probabilities:" << std::endl;
+			for (int i = 0; i < cell_definitions_by_index.size(); i++)
+			{
+				for (int j = i; j < cell_definitions_by_index.size(); j++)
+				{
+					std::cerr << "  - " << cell_definitions_by_index[i]->name << " and " << cell_definitions_by_index[j]->name << ": " << pCell_parent->phenotype.cycle.asymmetric_division.asymmetric_division_probability(i, j) << std::endl;
+				}
+			}
+			exit(-1);
 		}
-		pCell_parent->phenotype.cycle.asymmetric_division.asymmetric_division_probabilities[pCell_parent->type] = sym_div_prob;
-		pCell_daughter->phenotype.cycle.asymmetric_division.asymmetric_division_probabilities[pCell_daughter->type] = sym_div_prob;
+		pCell_parent->phenotype.cycle.asymmetric_division.set_asymmetric_division_probability(parent_type, parent_type, sym_div_prob);
+		pCell_daughter->phenotype.cycle.asymmetric_division.set_asymmetric_division_probability(pCell_daughter->type, pCell_daughter->type, sym_div_prob);
 	}
-	double r = UniformRandom();
-	for( int i=0; i < pCD_parent->phenotype.cycle.asymmetric_division.asymmetric_division_probabilities.size(); i++ )
-	{
-		if( r <= pCell_parent->phenotype.cycle.asymmetric_division.asymmetric_division_probabilities[i] )
-		{
-			if (i != pCell_daughter->type) // only convert if the daughter is not already the correct type
-			{ pCell_daughter->convert_to_cell_definition( *cell_definitions_by_index[i] ); }
-			return;
-		}
-		r -= pCell_parent->phenotype.cycle.asymmetric_division.asymmetric_division_probabilities[i];
-	}
-	// if we're here, then do not do asym div
+	std::pair<int, int> daughter_types = pCell_parent->phenotype.cycle.asymmetric_division.select_daughter_types(pCell_parent->type, pCell_daughter->type);
+
+	if (daughter_types.first != pCell_parent->type) // only convert if the parent is not already the correct type
+	{ pCell_parent->convert_to_cell_definition( *cell_definitions_by_index[daughter_types.first] ); }
+	if (daughter_types.second != pCell_daughter->type) // only convert if the daughter is not already the correct type
+	{ pCell_daughter->convert_to_cell_definition( *cell_definitions_by_index[daughter_types.second] ); }
 	return;
 }
-
-//  alternative way to select the index from weights that could be faster (is faster as # cell types --> infinity)
-// int select_by_probabilities( const std::vector<double>& probabilities )
-// {
-// 	double r = UniformRandom();
-
-// 	std::vector<double> cumulative_weights(probabilities.size());
-// 	std::partial_sum(probabilities.begin(), probabilities.end(), cumulative_weights.begin());
-
-// 	// Use binary search to find the index
-// 	auto it = std::upper_bound(cumulative_weights.begin(), cumulative_weights.end(), r);
-// 	int index = std::distance(cumulative_weights.begin(), it);
-// 	if (index >= probabilities.size())
-// 	{ return -1; }
-	
-// 	return index;
-// }
 
 void dynamic_attachments( Cell* pCell , Phenotype& phenotype, double dt )
 {
     // check for detachments 
     double detachment_probability = phenotype.mechanics.detachment_rate * dt; 
-    for( int j=0; j < pCell->state.attached_cells.size(); j++ )
+	// detach_cells swaps the detached cell with the last cell in the vector, so we need to iterate backwards
+    for( int j=pCell->state.attached_cells.size()-1; j >= 0; j-- )
     {
         Cell* pTest = pCell->state.attached_cells[j]; 
         if( UniformRandom() <= detachment_probability )
@@ -1441,8 +1432,6 @@ void dynamic_attachments( Cell* pCell , Phenotype& phenotype, double dt )
     while( done == false && j < pCell->state.neighbors.size() )
     {
         Cell* pTest = pCell->state.neighbors[j]; 
-		if (phenotype.cell_interactions.pAttackTarget==pTest || pTest->phenotype.cell_interactions.pAttackTarget==pCell) // do not let attackers detach randomly
-		{ continue; }
         if( pTest->state.number_of_attached_cells() < pTest->phenotype.mechanics.maximum_number_of_attachments )
         {
             // std::string search_string = "adhesive affinity to " + pTest->type_name; 
@@ -1467,9 +1456,12 @@ void dynamic_spring_attachments( Cell* pCell , Phenotype& phenotype, double dt )
 {
     // check for detachments 
     double detachment_probability = phenotype.mechanics.detachment_rate * dt; 
-    for( int j=0; j < pCell->state.spring_attachments.size(); j++ )
+	// detach_cells_as_spring swaps the detached cell with the last cell in the vector, so we need to iterate backwards
+    for( int j=pCell->state.spring_attachments.size()-1; j >= 0; j-- )
     {
-        Cell* pTest = pCell->state.spring_attachments[j]; 
+        Cell* pTest = pCell->state.spring_attachments[j];
+		if (phenotype.cell_interactions.pAttackTarget==pTest || pTest->phenotype.cell_interactions.pAttackTarget==pCell) // do not let attackers detach randomly
+		{ continue; }
         if( UniformRandom() <= detachment_probability )
         { detach_cells_as_spring( pCell , pTest ); }
     }
