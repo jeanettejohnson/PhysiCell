@@ -257,6 +257,12 @@ void add_PhysiCell_cells_to_open_xml_pugi_v2( pugi::xml_document& xml_dom, std::
 		// ID 					<label index="0" size="1">ID</label>
 		add_variable_to_labels( data_names,data_units,data_start_indices,data_sizes, 
 			"ID" , "none" , 1 ) ; 
+		//Generation for lineage tracking from rheiland
+		add_variable_to_labels( data_names,data_units,data_start_indices,data_sizes, 
+			"generation" , "none" , 1 ) ; 
+		//ParentID for lineage tracking from rheiland
+		add_variable_to_labels( data_names,data_units,data_start_indices,data_sizes, 
+			"parentID" , "none" , 1 ) ;
 
 		//					<label index="1" size="3">position</label>
 		add_variable_to_labels( data_names,data_units,data_start_indices,data_sizes, 
@@ -339,10 +345,6 @@ void add_PhysiCell_cells_to_open_xml_pugi_v2( pugi::xml_document& xml_dom, std::
 		// current exit rate // 1 
 		add_variable_to_labels( data_names,data_units,data_start_indices,data_sizes, 
 			"current_cycle_phase_exit_rate" , "1/min" , 1 ); 
-
-	  // elapsed time in phase // 1 
-		add_variable_to_labels( data_names,data_units,data_start_indices,data_sizes, 
-			"elapsed_time_in_phase" , "min" , 1 ); 
 
 		// death 
 		// live or dead state // 1 
@@ -570,7 +572,7 @@ void add_PhysiCell_cells_to_open_xml_pugi_v2( pugi::xml_document& xml_dom, std::
 	// asymmetric division
 		// std::vector<double> asymmetric_division_probabilities; // n
 		add_variable_to_labels( data_names, data_units, data_start_indices, data_sizes, 
-			"asymmetric_division_probabilities" , "none" , n );
+			"asymmetric_division_probabilities" , "none" , n * (n+1) / 2 );
 
 	// cell integrity 
 
@@ -734,9 +736,6 @@ void add_PhysiCell_cells_to_open_xml_pugi_v2( pugi::xml_document& xml_dom, std::
 	char filename [1024]; 
 	sprintf( filename , "%s_cells.mat" , filename_base.c_str() ); 
 
-	char filename_csv [1024];
-	// sprintf( filename_csv , "%s_cells.csv" , filename_base.c_str() );
-	
 	/* store filename without the relative pathing (if any) */ 
 	char filename_without_pathing [1024];
 	char* filename_start = strrchr( filename , '/' ); 
@@ -761,8 +760,6 @@ void add_PhysiCell_cells_to_open_xml_pugi_v2( pugi::xml_document& xml_dom, std::
 	int number_of_data_entries = (*all_cells).size();  
 
 	FILE* fp = write_matlab_header( size_of_each_datum, number_of_data_entries,  filename, "cells" );  
-	// FILE* csv_fp = fopen( filename_csv , "w" );
-
 	if( fp == NULL )
 	{ 
 		std::cout << std::endl << "Error: Failed to open " << filename << " for MAT writing." << std::endl << std::endl; 
@@ -791,56 +788,47 @@ void add_PhysiCell_cells_to_open_xml_pugi_v2( pugi::xml_document& xml_dom, std::
 
 		// name = "ID"; 
 		dTemp = (double) pCell->ID;
+		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp );
+		// name = "generation"; lineage tracking from rheiland
+		dTemp = (double) pCell->generation;
+		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
+        // name = "parentID"; lineage tracking from rheiland
+		dTemp = (double) pCell->parentID;
 		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
 		// name = "position";    NOTE very different syntax for writing vectors!
         std::fwrite( pCell->position.data() , sizeof(double) , 3 , fp );
-		// write position data to csv
-		// fprintf(csv_fp, "%f,%f,%f," , pCell->position[0], pCell->position[1], pCell->position[2] );
 		// name = "total_volume"; 
 		std::fwrite( &( pCell->phenotype.volume.total ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , pCell->phenotype.volume.total );
 		// name = "cell_type"; 
 		dTemp = (double) pCell->type;
 		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , dTemp );
 		// name = "cycle_model"; 
 		dTemp = (double) pCell->phenotype.cycle.model().code; 
 		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); // cycle model 
-		// fprintf(csv_fp, "%f," , dTemp );
 		// name = "current_phase"; 
 		dTemp = (double) pCell->phenotype.cycle.current_phase().code; 
 		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); // cycle model 
-		// fprintf(csv_fp, "%f," , dTemp );
 		// name = "elapsed_time_in_phase"; 
 		std::fwrite( &( pCell->phenotype.cycle.data.elapsed_time_in_phase ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , pCell->phenotype.cycle.data.elapsed_time_in_phase );
 		// name = "nuclear_volume"; 
 		std::fwrite( &( pCell->phenotype.volume.nuclear ) , sizeof(double) , 1 , fp );   
-		// fprintf(csv_fp, "%f," , pCell->phenotype.volume.nuclear );
 		// name = "cytoplasmic_volume"; 
 		std::fwrite( &( pCell->phenotype.volume.cytoplasmic ) , sizeof(double) , 1 , fp );
-		// fprintf(csv_fp, "%f," , pCell->phenotype.volume.cytoplasmic );
 		// name = "fluid_fraction"; 
 		std::fwrite( &( pCell->phenotype.volume.fluid_fraction ) , sizeof(double) , 1 , fp );
-		// fprintf(csv_fp, "%f," , pCell->phenotype.volume.fluid_fraction );
 		// name = "calcified_fraction"; 
 		std::fwrite( &( pCell->phenotype.volume.calcified_fraction ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , pCell->phenotype.volume.calcified_fraction );
 		// name = "orientation"; 
 		std::fwrite( pCell->state.orientation.data() , sizeof(double) , 3 , fp ); 
-		// fprintf(csv_fp, "%f,%f,%f," , pCell->state.orientation[0], pCell->state.orientation[1], pCell->state.orientation[2] );
 		// name = "polarity"; 
 		std::fwrite( &( pCell->phenotype.geometry.polarity ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , pCell->phenotype.geometry.polarity );
 
  /* state variables to save */ 
 // state
 		// name = "velocity"; 
 		std::fwrite( pCell->velocity.data() , sizeof(double) , 3 , fp ); 
-		// fprintf(csv_fp, "%f,%f,%f," , pCell->velocity[0], pCell->velocity[1], pCell->velocity[2] );
 		// name = "pressure"; 
 		std::fwrite( &( pCell->state.simple_pressure ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , pCell->state.simple_pressure );
 		// name = "number_of_nuclei"; 
 		dTemp = (double) pCell->state.number_of_nuclei; 
 		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
@@ -848,11 +836,9 @@ void add_PhysiCell_cells_to_open_xml_pugi_v2( pugi::xml_document& xml_dom, std::
 		// std::fwrite( &( pCell->phenotype.integrity.damage ) , sizeof(double) , 1 , fp ); 
 		// name = "total_attack_time"; 
 		std::fwrite( &( pCell->state.total_attack_time ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , pCell->state.total_attack_time );
 		// name = "contact_with_basement_membrane"; 
 		dTemp = (double) pCell->state.contact_with_basement_membrane; 
 		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , dTemp );
 
 /* now go through phenotype and state */ 
 // cycle 
@@ -860,183 +846,107 @@ void add_PhysiCell_cells_to_open_xml_pugi_v2( pugi::xml_document& xml_dom, std::
 		// name = "current_cycle_phase_exit_rate"; 
 		int phase_index = pCell->phenotype.cycle.data.current_phase_index; 
 		std::fwrite( &( pCell->phenotype.cycle.data.exit_rate(phase_index) ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , pCell->phenotype.cycle.data.exit_rate(phase_index) );
-		// name = "elapsed_time_in_phase"; 
-		std::fwrite( &( pCell->phenotype.cycle.data.elapsed_time_in_phase ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , pCell->phenotype.cycle.data.elapsed_time_in_phase );
 
 // death 
   // live or dead state // 1 
 		// name = "dead"; 
 		dTemp = (double) pCell->phenotype.death.dead; 
 		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , dTemp );
 		// name = "current_death_model"; // 
 		dTemp = (double) pCell->phenotype.death.current_death_model_index; 
 		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , dTemp );
 		// name = "death_rates"; 
 		std::fwrite( pCell->phenotype.death.rates.data() , sizeof(double) , nd , fp ); 
-		for (int j = 0; j < nd; j++ )
-		{
-			// fprintf(csv_fp, "%f,", pCell->phenotype.death.rates[j]);
-		}
 		
 	// volume ()
 		// name = "cytoplasmic_biomass_change_rate"; 
 		std::fwrite( &( pCell->phenotype.volume.cytoplasmic_biomass_change_rate ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , pCell->phenotype.volume.cytoplasmic_biomass_change_rate );
 		// name = "nuclear_biomass_change_rate"; 
 		std::fwrite( &( pCell->phenotype.volume.nuclear_biomass_change_rate ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , pCell->phenotype.volume.nuclear_biomass_change_rate );
 		// name = "fluid_change_rate"; 
 		std::fwrite( &( pCell->phenotype.volume.fluid_change_rate ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , pCell->phenotype.volume.fluid_change_rate );
 		// name = "calcification_rate"; 
 		std::fwrite( &( pCell->phenotype.volume.calcification_rate ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , pCell->phenotype.volume.calcification_rate );
 		// name = "target_solid_cytoplasmic"; 
 		std::fwrite( &( pCell->phenotype.volume.target_solid_cytoplasmic ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , pCell->phenotype.volume.target_solid_cytoplasmic );
 		// name = "target_solid_nuclear"; 
 		std::fwrite( &( pCell->phenotype.volume.target_solid_nuclear ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , pCell->phenotype.volume.target_solid_nuclear );
 		// name = "target_fluid_fraction"; 
 		std::fwrite( &( pCell->phenotype.volume.target_fluid_fraction ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , pCell->phenotype.volume.target_fluid_fraction );
 
   // geometry 
      // radius //1 
 		// name = "radius"; 
 		std::fwrite( &( pCell->phenotype.geometry.radius ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , pCell->phenotype.geometry.radius );
 		// name = "nuclear_radius"; 
 		std::fwrite( &( pCell->phenotype.geometry.nuclear_radius ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , pCell->phenotype.geometry.nuclear_radius );
 		// name = "surface_area"; 
 		std::fwrite( &( pCell->phenotype.geometry.surface_area ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , pCell->phenotype.geometry.surface_area );
 
   // mechanics 
 	// cell_cell_adhesion_strength; // 1
 		// name = "cell_cell_adhesion_strength"; 
 		std::fwrite( &( pCell->phenotype.mechanics.cell_cell_adhesion_strength ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , pCell->phenotype.mechanics.cell_cell_adhesion_strength );
 		// name = "cell_BM_adhesion_strength"; 
 		std::fwrite( &( pCell->phenotype.mechanics.cell_BM_adhesion_strength ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , pCell->phenotype.mechanics.cell_BM_adhesion_strength );
 		// name = "cell_cell_repulsion_strength"; 
 		std::fwrite( &( pCell->phenotype.mechanics.cell_cell_repulsion_strength ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , pCell->phenotype.mechanics.cell_cell_repulsion_strength );
 		// name = "cell_BM_repulsion_strength"; 
 		std::fwrite( &( pCell->phenotype.mechanics.cell_BM_repulsion_strength ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , pCell->phenotype.mechanics.cell_BM_repulsion_strength );
 		// name = "cell_adhesion_affinities"; 
 		std::fwrite( pCell->phenotype.mechanics.cell_adhesion_affinities.data() , sizeof(double) , n , fp ); 
-		for (int j = 0; j < n; j++ )
-		{
-			// fprintf(csv_fp, "%f,", pCell->phenotype.mechanics.cell_adhesion_affinities[j]);
-		}
 		// name = "relative_maximum_adhesion_distance"; 
 		std::fwrite( &( pCell->phenotype.mechanics.relative_maximum_adhesion_distance ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , pCell->phenotype.mechanics.relative_maximum_adhesion_distance );
 		// name = "maximum_number_of_attachments"; 
 		dTemp = (double) pCell->phenotype.mechanics.maximum_number_of_attachments; 
 		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , dTemp );
 		// name = "attachment_elastic_constant"; 
 		std::fwrite( &( pCell->phenotype.mechanics.attachment_elastic_constant ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , pCell->phenotype.mechanics.attachment_elastic_constant );
 		// name = "attachment_rate"; 
 		std::fwrite( &( pCell->phenotype.mechanics.attachment_rate ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , pCell->phenotype.mechanics.attachment_rate );
  		// name = "detachment_rate"; 
 		std::fwrite( &( pCell->phenotype.mechanics.detachment_rate ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , pCell->phenotype.mechanics.detachment_rate );		
 
  // Motility
  		// name = "is_motile"; 
 		dTemp = (double) pCell->phenotype.motility.is_motile; 
 		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , dTemp );
  		// name = "persistence_time"; 
 		std::fwrite( &( pCell->phenotype.motility.persistence_time ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , pCell->phenotype.motility.persistence_time );
  		// name = "migration_speed"; 
 		std::fwrite( &( pCell->phenotype.motility.migration_speed ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , pCell->phenotype.motility.migration_speed );
  		// name = "migration_bias_direction"; 
 		std::fwrite( pCell->phenotype.motility.migration_bias_direction.data() , sizeof(double) , 3 , fp ); 
-		for (int j = 0; j < 3; j++ )
-		{
-			// fprintf(csv_fp, "%f,", pCell->phenotype.motility.migration_bias_direction[j]);
-		}
  		// name = "migration_bias"; 
 		std::fwrite( &( pCell->phenotype.motility.migration_bias ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , pCell->phenotype.motility.migration_bias );
  		// name = "motility_vector"; 
 		std::fwrite( pCell->phenotype.motility.motility_vector.data() , sizeof(double) , 3 , fp ); 
-		// fprintf(csv_fp, "%f,%f,%f," , pCell->phenotype.motility.motility_vector[0], pCell->phenotype.motility.motility_vector[1], pCell->phenotype.motility.motility_vector[2] );
  		// name = "chemotaxis_index"; 
 		dTemp = (double) pCell->phenotype.motility.chemotaxis_index; 
 		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , dTemp );
  		// name = "chemotaxis_direction"; 
 		dTemp = (double) pCell->phenotype.motility.chemotaxis_direction; 
 		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
-		// fprintf(csv_fp, "%f," , dTemp );
  		// name = "chemotactic_sensitivities"; 
 		std::fwrite( pCell->phenotype.motility.chemotactic_sensitivities.data() , sizeof(double) , m , fp ); 
-		for (int j = 0; j < m; j++ )
-		{
-			// fprintf(csv_fp, "%f,", pCell->phenotype.motility.chemotactic_sensitivities[j]);
-		}
 
 // secretion 
  		// name = "secretion_rates"; 
 		std::fwrite( pCell->phenotype.secretion.secretion_rates.data() , sizeof(double) , m , fp ); 
-		for (int j = 0; j < m; j++ )
-		{
-			// fprintf(csv_fp, "%f,", pCell->phenotype.secretion.secretion_rates[j]);
-		}
 	 	// name = "uptake_rates"; 
 		std::fwrite( pCell->phenotype.secretion.uptake_rates.data() , sizeof(double) , m , fp ); 
-		for (int j = 0; j < m; j++ )
-		{
-			// fprintf(csv_fp, "%f,", pCell->phenotype.secretion.uptake_rates[j]);
-		}
  		// name = "saturation_densities"; 
 		std::fwrite( pCell->phenotype.secretion.saturation_densities.data() , sizeof(double) , m , fp ); 
-		for (int j = 0; j < m; j++ )
-		{
-			// fprintf(csv_fp, "%f,", pCell->phenotype.secretion.saturation_densities[j]);
-		}
  		// name = "net_export_rates"; 
 		std::fwrite( pCell->phenotype.secretion.net_export_rates.data() , sizeof(double) , m , fp ); 
-		for (int j = 0; j < m; j++ )
-		{
-			// fprintf(csv_fp, "%f,", pCell->phenotype.secretion.net_export_rates[j]);
-		}
 
 // molecular 
  		// name = "internalized_total_substrates"; 
 		std::fwrite( pCell->phenotype.molecular.internalized_total_substrates.data() , sizeof(double) , m , fp ); 
-		for (int j = 0; j < m; j++ )
-		{
-			// fprintf(csv_fp, "%f,", pCell->phenotype.molecular.internalized_total_substrates[j]);
-		}
  		// name = "fraction_released_at_death"; 
 		std::fwrite( pCell->phenotype.molecular.fraction_released_at_death.data() , sizeof(double) , m , fp ); 
-		for (int j = 0; j < m; j++ )
-		{
-			// fprintf(csv_fp, "%f,", pCell->phenotype.molecular.fraction_released_at_death[j]);
-		}
  		// name = "fraction_transferred_when_ingested"; 
 		std::fwrite( pCell->phenotype.molecular.fraction_transferred_when_ingested.data() , sizeof(double) , m , fp ); 
-		for (int j = 0; j < m; j++ )
-		{
-			// fprintf(csv_fp, "%f,", pCell->phenotype.molecular.fraction_transferred_when_ingested[j]);
-		}
 
 // interactions 
 	/*
@@ -1072,10 +982,6 @@ void add_PhysiCell_cells_to_open_xml_pugi_v2( pugi::xml_document& xml_dom, std::
 
  		// name = "fusion_rates"; 
 		std::fwrite( pCell->phenotype.cell_interactions.fusion_rates.data() , sizeof(double) , n , fp ); 
-		for (int j = 0; j < n; j++ )
-		{
-			// fprintf(csv_fp, "%f,", pCell->phenotype.cell_interactions.fusion_rates[j]);
-		}
 
 // transformations 
   		// name = "transformation_rates"; 
@@ -1083,7 +989,14 @@ void add_PhysiCell_cells_to_open_xml_pugi_v2( pugi::xml_document& xml_dom, std::
 
 // asymmetric division
 		// name = "asymmetric_division_rate"; 
-		std::fwrite( pCell->phenotype.cycle.asymmetric_division.asymmetric_division_probabilities.data() , sizeof(double) , n, fp );
+		for ( int i1 = 0; i1 < n; i1++ )
+		{
+			for ( int i2 = i1; i2 < n; i2++ )
+			{
+				double prob = pCell->phenotype.cycle.asymmetric_division.asymmetric_division_probability(i1, i2);
+				std::fwrite(&prob, sizeof(double), 1, fp);
+			}
+		}
 
 	// cell integrity 
  		// name = "damage"; 
@@ -1096,27 +1009,17 @@ void add_PhysiCell_cells_to_open_xml_pugi_v2( pugi::xml_document& xml_dom, std::
 // custom 
 		// custom scalar variables 
 		for( int j=0 ; j < (*all_cells)[0]->custom_data.variables.size(); j++ )
-		{
-			std::fwrite(&(pCell->custom_data.variables[j].value), sizeof(double), 1, fp);
-			// fprintf(csv_fp, "%f,", pCell->custom_data.variables[j].value);
-		}
+		{ std::fwrite( &( pCell->custom_data.variables[j].value ) , sizeof(double) , 1 , fp ); }
 
 		// custom vector variables 
 		for( int j=0 ; j < (*all_cells)[0]->custom_data.vector_variables.size(); j++ )
 		{
 			int size_temp = pCell->custom_data.vector_variables[j].value.size(); 
 			std::fwrite( pCell->custom_data.vector_variables[j].value.data() , sizeof(double) , size_temp , fp );
-			for (int k = 0; k < size_temp; k++)
-			{
-				// fprintf(csv_fp, "%f,", pCell->custom_data.vector_variables[j].value[k]);
-			}
 		}
-		// strip the last comma and add a newline
-		// fprintf(csv_fp, "\n");
 	}
 
 	fclose( fp ); 
-	// fclose( csv_fp );
 
 #ifdef ADDON_PHYSIBOSS
 

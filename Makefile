@@ -74,7 +74,7 @@ list-projects:
 	@echo "Sample projects: template biorobots-sample cancer-biorobots-sample cancer-immune-sample"
 	@echo "                 celltypes3-sample heterogeneity-sample pred-prey-farmer virus-macrophage-sample"
 	@echo "                 worm-sample interaction-sample mechano-sample rules-sample physimess-sample custom-division-sample"
-	@echo "                 asymmetric-division-sample immune-function-sample episode-sample"
+	@echo "                 asymmetric-division-sample extended-asym-div-sample immune-function-sample episode-sample"
 	@echo "					template-ecm template-xml-rules template-xml-rules-extended"
 	@echo ""
 	@echo "Sample intracellular projects: template_BM ode-energy-sample physiboss-cell-lines-sample"
@@ -207,6 +207,7 @@ mechano-sample:
 	cp ./sample_projects/mechano/main.cpp ./main.cpp 
 	cp Makefile Makefile-backup
 	cp ./sample_projects/mechano/Makefile .
+	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml 
 	cp ./sample_projects/mechano/config/* ./config/
 
 rules-sample:
@@ -260,7 +261,17 @@ episode-sample:
 	cp ./sample_projects/episode/main.cpp ./main.cpp
 	cp Makefile Makefile-backup
 	cp ./sample_projects/episode/Makefile .
+	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml 
 	cp -r ./sample_projects/episode/config/* ./config
+
+extended-asym-div-sample:
+	cp -r ./sample_projects/extended_asym_div/custom_modules/* ./custom_modules/
+	touch main.cpp && cp main.cpp main-backup.cpp
+	cp ./sample_projects/extended_asym_div/main.cpp ./main.cpp 
+	cp Makefile Makefile-backup
+	cp ./sample_projects/extended_asym_div/Makefile .
+	cp ./config/PhysiCell_settings.xml ./config/PhysiCell_settings-backup.xml 
+	cp -r ./sample_projects/extended_asym_div/config/* ./config/
 
 dirichlet-from-file-sample:
 	cp -r ./sample_projects/dirichlet_from_file/custom_modules/* ./custom_modules/
@@ -269,7 +280,7 @@ dirichlet-from-file-sample:
 	cp Makefile Makefile-backup
 	cp ./sample_projects/dirichlet_from_file/Makefile .
 	cp -r ./sample_projects/dirichlet_from_file/config/* ./config 
-	
+
 # ---- intracellular projects 
 ode-energy-sample:
 	cp ./sample_projects_intracellular/ode/ode_energy/custom_modules/* ./custom_modules/

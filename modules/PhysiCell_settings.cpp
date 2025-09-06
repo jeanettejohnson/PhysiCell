@@ -1264,10 +1264,13 @@ void set_intracellular_files(pugi::xml_node &node_config_intracellular, const pu
 	}
 	else if (intracellular_type == "roadrunner" || intracellular_type == "dfba")
 	{
+		std::string rr_filename = base_path_to_filename + "_" + intracellular_type + ".xml";
+		// determine if file exists already
+		if (std::ifstream(rr_filename))
+		{ return; }
 		pugi::xml_node node_rr_root = node_this_intracellular.child("sbml");
 		pugi::xml_document rr_doc;
 		rr_doc.append_copy(node_rr_root);
-		std::string rr_filename = base_path_to_filename + "_" + intracellular_type + ".xml";
 		rr_doc.save_file(rr_filename.c_str());
 		pugi::xml_node node_sbml_filename = node_config_intracellular.child("sbml_filename");
 		if (!node_sbml_filename)
