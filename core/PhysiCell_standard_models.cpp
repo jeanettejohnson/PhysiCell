@@ -1414,7 +1414,7 @@ void dynamic_attachments( Cell* pCell , Phenotype& phenotype, double dt )
     // check for detachments 
     double detachment_probability = phenotype.mechanics.detachment_rate * dt; 
 	// detach_cells swaps the detached cell with the last cell in the vector, so we need to iterate backwards
-    for( int j=pCell->state.attached_cells.size()-1; j >= 0; j-- )
+    for( size_t j=pCell->state.attached_cells.size(); j-- > 0; )
     {
         Cell* pTest = pCell->state.attached_cells[j]; 
         if( UniformRandom() <= detachment_probability )
@@ -1457,7 +1457,7 @@ void dynamic_spring_attachments( Cell* pCell , Phenotype& phenotype, double dt )
     // check for detachments 
     double detachment_probability = phenotype.mechanics.detachment_rate * dt; 
 	// detach_cells_as_spring swaps the detached cell with the last cell in the vector, so we need to iterate backwards
-    for( int j=pCell->state.spring_attachments.size()-1; j >= 0; j-- )
+	for (size_t j = pCell->state.spring_attachments.size(); j-- > 0; )
     {
         Cell* pTest = pCell->state.spring_attachments[j];
 		if (phenotype.cell_interactions.pAttackTarget==pTest || pTest->phenotype.cell_interactions.pAttackTarget==pCell) // do not let attackers detach randomly
