@@ -376,6 +376,46 @@ void csv_to_vector( const char* buffer , std::vector<double>& vect )
 	return; 
 }
 
+void substrate_csv_to_vector(const char* buffer, std::vector<double>& vect)
+{
+    vect.clear();
+
+    const char* start = buffer;
+    const char* end   = buffer;
+
+    while (*end != '\0')
+    {
+        if (*end == ',')
+        {
+            if (start == end) 
+            {
+                // Empty field: treat as 0
+                vect.push_back(0.0);
+            }
+            else
+            {
+                vect.push_back(strtod(start, nullptr));
+            }
+            end++;
+            start = end;
+        }
+        else
+        {
+            end++;
+        }
+    }
+
+    // Handle the last field (could be empty at end of line)
+    if (start == end)
+    {
+        vect.push_back(0.0);
+    }
+    else
+    {
+        vect.push_back(strtod(start, nullptr));
+    }
+}
+
 void dirichlet_csv_to_vector( const char* buffer , std::vector<bool>& is_missing , std::vector<double>& data )
 {
 	size_t ind = 0;
