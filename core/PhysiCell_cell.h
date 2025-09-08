@@ -75,10 +75,14 @@
 #include "./PhysiCell_cell_container.h"
 #include "./PhysiCell_constants.h"
 
-#include "../modules/PhysiCell_settings.h" 
+#include "../modules/PhysiCell_settings.h"
 
 #include "./PhysiCell_standard_models.h" 
-#include "./PhysiCell_rules.h"
+#include "./PhysiCell_rules_extended.h"
+
+#ifdef ADDON_PHYSIECM
+#include "../addons/PhysiECM/cell_ecm_interactions.h"
+#endif
 
 using namespace BioFVM; 
 
@@ -188,7 +192,8 @@ class Cell : public Basic_Agent
 	
 	bool is_out_of_domain;
 	bool is_movable;
-
+    int generation;   // for lineage tracking from rheiland
+    int parentID;   // for lineage tracking from rheiland
 	void flag_for_division( void ); // done 
 	void flag_for_removal( void ); // done 
 	
@@ -287,6 +292,8 @@ Cell_Definition& get_cell_definition( int search_type );
 Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node ); 
 void initialize_cell_definitions_from_pugixml( pugi::xml_node root ); 
 void initialize_cell_definitions_from_pugixml( void );
+
+void parse_intracellular_model(pugi::xml_node node, Cell_Definition* pCD, Cell_Definition* pParent);
 
 extern std::vector<double> (*cell_division_orientation)(void);
 

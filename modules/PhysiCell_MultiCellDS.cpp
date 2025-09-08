@@ -257,6 +257,12 @@ void add_PhysiCell_cells_to_open_xml_pugi_v2( pugi::xml_document& xml_dom, std::
 		// ID 					<label index="0" size="1">ID</label>
 		add_variable_to_labels( data_names,data_units,data_start_indices,data_sizes, 
 			"ID" , "none" , 1 ) ; 
+		//Generation for lineage tracking from rheiland
+		add_variable_to_labels( data_names,data_units,data_start_indices,data_sizes, 
+			"generation" , "none" , 1 ) ; 
+		//ParentID for lineage tracking from rheiland
+		add_variable_to_labels( data_names,data_units,data_start_indices,data_sizes, 
+			"parentID" , "none" , 1 ) ;
 
 		//					<label index="1" size="3">position</label>
 		add_variable_to_labels( data_names,data_units,data_start_indices,data_sizes, 
@@ -339,10 +345,6 @@ void add_PhysiCell_cells_to_open_xml_pugi_v2( pugi::xml_document& xml_dom, std::
 		// current exit rate // 1 
 		add_variable_to_labels( data_names,data_units,data_start_indices,data_sizes, 
 			"current_cycle_phase_exit_rate" , "1/min" , 1 ); 
-
-	  // elapsed time in phase // 1 
-		add_variable_to_labels( data_names,data_units,data_start_indices,data_sizes, 
-			"elapsed_time_in_phase" , "min" , 1 ); 
 
 		// death 
 		// live or dead state // 1 
@@ -570,7 +572,7 @@ void add_PhysiCell_cells_to_open_xml_pugi_v2( pugi::xml_document& xml_dom, std::
 	// asymmetric division
 		// std::vector<double> asymmetric_division_probabilities; // n
 		add_variable_to_labels( data_names, data_units, data_start_indices, data_sizes, 
-			"asymmetric_division_probabilities" , "none" , n );
+			"asymmetric_division_probabilities" , "none" , n * (n+1) / 2 );
 
 	// cell integrity 
 
@@ -733,7 +735,7 @@ void add_PhysiCell_cells_to_open_xml_pugi_v2( pugi::xml_document& xml_dom, std::
 	// next, filename 
 	char filename [1024]; 
 	sprintf( filename , "%s_cells.mat" , filename_base.c_str() ); 
-	
+
 	/* store filename without the relative pathing (if any) */ 
 	char filename_without_pathing [1024];
 	char* filename_start = strrchr( filename , '/' ); 
@@ -786,6 +788,12 @@ void add_PhysiCell_cells_to_open_xml_pugi_v2( pugi::xml_document& xml_dom, std::
 
 		// name = "ID"; 
 		dTemp = (double) pCell->ID;
+		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp );
+		// name = "generation"; lineage tracking from rheiland
+		dTemp = (double) pCell->generation;
+		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
+        // name = "parentID"; lineage tracking from rheiland
+		dTemp = (double) pCell->parentID;
 		std::fwrite( &( dTemp ) , sizeof(double) , 1 , fp ); 
 		// name = "position";    NOTE very different syntax for writing vectors!
         std::fwrite( pCell->position.data() , sizeof(double) , 3 , fp );
@@ -838,8 +846,6 @@ void add_PhysiCell_cells_to_open_xml_pugi_v2( pugi::xml_document& xml_dom, std::
 		// name = "current_cycle_phase_exit_rate"; 
 		int phase_index = pCell->phenotype.cycle.data.current_phase_index; 
 		std::fwrite( &( pCell->phenotype.cycle.data.exit_rate(phase_index) ) , sizeof(double) , 1 , fp ); 
-		// name = "elapsed_time_in_phase"; 
-		std::fwrite( &( pCell->phenotype.cycle.data.elapsed_time_in_phase ) , sizeof(double) , 1 , fp ); 
 
 // death 
   // live or dead state // 1 
@@ -983,7 +989,14 @@ void add_PhysiCell_cells_to_open_xml_pugi_v2( pugi::xml_document& xml_dom, std::
 
 // asymmetric division
 		// name = "asymmetric_division_rate"; 
-		std::fwrite( pCell->phenotype.cycle.asymmetric_division.asymmetric_division_probabilities.data() , sizeof(double) , n, fp );
+		for ( int i1 = 0; i1 < n; i1++ )
+		{
+			for ( int i2 = i1; i2 < n; i2++ )
+			{
+				double prob = pCell->phenotype.cycle.asymmetric_division.asymmetric_division_probability(i1, i2);
+				std::fwrite(&prob, sizeof(double), 1, fp);
+			}
+		}
 
 	// cell integrity 
  		// name = "damage"; 

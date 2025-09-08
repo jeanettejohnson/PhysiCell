@@ -68,12 +68,11 @@
 #include <vector>
 #include <string>
 
+
 #ifndef __PhysiCell_signal_response__
 #define __PhysiCell_signal_response__
 
-#include "./PhysiCell_constants.h" 
-#include "./PhysiCell_phenotype.h" 
-#include "./PhysiCell_cell.h" 
+#include "../core/PhysiCell.h"
 
 namespace PhysiCell{
 
@@ -97,8 +96,6 @@ void display_signal_dictionary_with_synonyms( void ); // done
 void display_behavior_dictionary_with_synonyms( void ); // done 
 void display_signal_dictionary_with_synonyms( std::ostream& os ); // done 
 void display_behavior_dictionary_with_synonyms( std::ostream& os ); // done 
-
-
 
 /* signal functions */ 
 
@@ -156,7 +153,7 @@ void set_single_behavior( Cell* pCell, std::string name , double parameter ); //
 std::vector<double> get_behaviors( Cell* pCell ); // done 
 
 // get selected current behavior
-std::vector<double> get_behaviors( Cell* pCell , std::vector<int> indices ); // doen 
+std::vector<double> get_behaviors( Cell* pCell , std::vector<int> indices ); // done 
 std::vector<double> get_behaviors( Cell* pCell , std::vector<std::string> names ); // done 
 
 // get single current behavior 
@@ -177,7 +174,6 @@ double get_single_base_behavior( Cell* pCell , int index ); // done
 double get_single_base_behavior( Cell* pCell , std::string name ); // done 
 
 double get_single_base_behavior( Cell_Definition* pCD , std::string name ); 
-
 
 }; 
 

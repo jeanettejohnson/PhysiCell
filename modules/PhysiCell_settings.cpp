@@ -66,6 +66,7 @@
 */
  
 #include <sys/stat.h>
+#include <algorithm>
 #include "./PhysiCell_settings.h"
 
 using namespace BioFVM; 
@@ -79,16 +80,18 @@ bool physicell_config_dom_initialized = false;
 pugi::xml_document physicell_config_doc; 	
 pugi::xml_node physicell_config_root; 
 	
-bool read_PhysiCell_config_file( std::string filename )
+ArgumentParser argument_parser;
+
+bool read_PhysiCell_config_file( void )
 {
 	physicell_config_dom_initialized = false; 
 
-	std::cout << "Using config file " << filename << " ... " << std::endl ; 
-	pugi::xml_parse_result result = physicell_config_doc.load_file( filename.c_str() );
+	std::cout << "Using config file " << argument_parser.path_to_config_file << " ... " << std::endl ; 
+	pugi::xml_parse_result result = physicell_config_doc.load_file( argument_parser.path_to_config_file.c_str() );
 	
 	if( result.status != pugi::xml_parse_status::status_ok )
 	{
-		std::cout << "Error loading " << filename << "!" << std::endl; 
+		std::cout << "Error loading " << argument_parser.path_to_config_file << "!" << std::endl; 
 		return false;
 	}
 	
@@ -97,19 +100,22 @@ bool read_PhysiCell_config_file( std::string filename )
 	return true;
 }
 
-bool load_PhysiCell_config_file( std::string filename )
+bool load_PhysiCell_config_file( void )
 {
-	if (!read_PhysiCell_config_file( filename ))
+	if (!read_PhysiCell_config_file( ))
 	{ return false; }
 
 	PhysiCell_settings.read_from_pugixml(); 
+	if (argument_parser.path_to_output_folder != "") {
+		PhysiCell_settings.folder = argument_parser.path_to_output_folder; // overwrite output folder if supplied by flag
+	}
 	
 	// now read the microenvironment (optional) 
 	
 	if( !setup_microenvironment_from_XML( physicell_config_root ) )
 	{
 		std::cout << std::endl
-			<< "Warning: microenvironment_setup not found in " << filename << std::endl
+			<< "Warning: microenvironment_setup not found in " << argument_parser.path_to_config_file << std::endl
 			<< "         Either manually setup microenvironment in setup_microenvironment() (custom.cpp)" << std::endl
 			<< "         or consult documentation to add microenvironment_setup to your configuration file." << std::endl << std::endl;
 	}
@@ -119,7 +125,10 @@ bool load_PhysiCell_config_file( std::string filename )
 
 	create_output_directory( PhysiCell_settings.folder );
 
-	return true; 	
+	std::string default_basename = "PhysiCell_settings.xml";
+	copy_file_to_output(argument_parser.path_to_config_file, default_basename); // copy the settings file to the output folder
+
+	return true;
 }
 
 PhysiCell_Settings::PhysiCell_Settings()
@@ -357,7 +366,7 @@ bool create_directories(const std::string &path)
 
 bool create_directory(const std::string &path)
 {
-#if defined(__MINGW32__) || defined(__MINGW64__)
+#if defined(_WIN32)
 	bool success = mkdir(path.c_str()) == 0;
 #else
 	bool success = mkdir(path.c_str(), 0755) == 0;
@@ -661,13 +670,13 @@ template std::ostream& operator<<(std::ostream& os, const Parameter<std::string>
 
 bool setup_microenvironment_from_XML( pugi::xml_node root_node )
 {
-	pugi::xml_node node; 
+	pugi::xml_node microenvironment_node; 
 
-	// First, look for the correct XML node. 
+	// First, look for the correct XML microenvironment_node. 
 	// If it isn't there, return false. 
 	
-	node = xml_find_node( root_node , "microenvironment_setup" );
-	if( !node )
+	microenvironment_node = xml_find_node( root_node , "microenvironment_setup" );
+	if( !microenvironment_node )
 	{ return false; }
 
 	// now that we're using the XML to specify the microenvironment, don't 
@@ -702,8 +711,8 @@ bool setup_microenvironment_from_XML( pugi::xml_node root_node )
 	// build the initial conditions and Dirichlet conditions as we go 
 
 	// find the first substrate 
-	pugi::xml_node node1 = node.child( "variable" ); // xml_find_node( node , "variable" ); 
-	node = node1; 
+	pugi::xml_node node1 = microenvironment_node.child( "variable" ); // xml_find_node( microenvironment_node , "variable" ); 
+	pugi::xml_node node = node1; 
 	int i = 0; 
 	
 	bool activated_Dirichlet_boundary_detected = false; 
@@ -942,8 +951,7 @@ bool setup_microenvironment_from_XML( pugi::xml_node root_node )
 	std::cout << "dc? " << default_microenvironment_options.outer_Dirichlet_conditions << std::endl; 
 	
 	// now, get the options 
-	node = xml_find_node( root_node , "microenvironment_setup" );
-	node = xml_find_node( node , "options" ); 
+	node = xml_find_node( microenvironment_node , "options" ); 
 	
 	// calculate gradients? 
 	default_microenvironment_options.calculate_gradients = xml_get_bool_value( node, "calculate_gradients" ); 
@@ -952,46 +960,335 @@ bool setup_microenvironment_from_XML( pugi::xml_node root_node )
 	default_microenvironment_options.track_internalized_substrates_in_each_agent 
 		= xml_get_bool_value( node, "track_internalized_substrates_in_each_agent" );
 
-	node = xml_find_node(node, "initial_condition");
-	if (node)
-	{
-		default_microenvironment_options.initial_condition_from_file_enabled = node.attribute("enabled").as_bool();
-		if (default_microenvironment_options.initial_condition_from_file_enabled)
+	if (argument_parser.path_to_ic_substrate_file != "") {
+		default_microenvironment_options.initial_condition_from_file_enabled = true;
+		std::string file_extension = argument_parser.path_to_ic_substrate_file.substr(argument_parser.path_to_ic_substrate_file.find_last_of(".") + 1);
+		if (file_extension == "mat")
 		{
-			default_microenvironment_options.initial_condition_file_type = node.attribute("type").as_string();
-			default_microenvironment_options.initial_condition_file = xml_get_string_value(node, "filename");
-
-			copy_file_to_output(default_microenvironment_options.initial_condition_file);
+			default_microenvironment_options.initial_condition_file_type = "matlab";
+		}
+		else if (file_extension == "csv")
+		{
+			default_microenvironment_options.initial_condition_file_type = "csv";
+		}
+		else
+		{
+			std::cerr << "Error: Initial condition file type for substrates not recognized. Please use .mat or .csv file." << std::endl;
+			exit(-1);
+		}
+		default_microenvironment_options.initial_condition_file = argument_parser.path_to_ic_substrate_file;
+	}
+	else
+	{
+		node = xml_find_node(node, "initial_condition");
+		if (node)
+		{
+			default_microenvironment_options.initial_condition_from_file_enabled = node.attribute("enabled").as_bool();
+			if (default_microenvironment_options.initial_condition_from_file_enabled)
+			{
+				default_microenvironment_options.initial_condition_file_type = node.attribute("type").as_string();
+				default_microenvironment_options.initial_condition_file = xml_get_string_value(node, "filename");
+			}
 		}
 	}
+	if (default_microenvironment_options.initial_condition_from_file_enabled)
+	{
+		std::string default_basename_substrates = default_microenvironment_options.initial_condition_file_type == "matlab" ? "substrates.mat" : "substrates.csv";
+		copy_file_to_output(default_microenvironment_options.initial_condition_file, default_basename_substrates);
+	}
 
-	// not yet supported : read initial conditions 
-	/*
-	// read in initial conditions from an external file 
-			<!-- not yet supported --> 
-			<initial_condition type="matlab" enabled="false">
-				<filename>./config/initial.mat</filename>
-			</initial_condition>
-	*/
-	
-	// not yet supported : read Dirichlet nodes (including boundary)
-	/*
-	// Read in Dirichlet nodes from an external file.
-	// Note that if they are defined this way, then 
-	// set 	default_microenvironment_options.outer_Dirichlet_conditions = false;
-	// so that the microenvironment initialization in BioFVM does not 
-	// also add Dirichlet nodes at the outer boundary
-
-			<!-- not yet supported --> 
-			<dirichlet_nodes type="matlab" enabled="false">
-				<filename>./config/dirichlet.mat</filename>
-			</dirichlet_nodes>
-	*/	
-	
+	if (argument_parser.path_to_ic_dc_file != "")
+	{
+		default_microenvironment_options.dirichlet_condition_from_file_enabled = true;
+		std::string file_extension = argument_parser.path_to_ic_dc_file.substr(argument_parser.path_to_ic_dc_file.find_last_of(".") + 1);
+		if (file_extension == "mat")
+		{
+			default_microenvironment_options.dirichlet_condition_file_type = "matlab";
+		}
+		else if (file_extension == "csv")
+		{
+			default_microenvironment_options.dirichlet_condition_file_type = "csv";
+		}
+		else
+		{
+			std::cerr << "Error: Dirichlet condition file type for substrates not recognized. Please use .mat or .csv file." << std::endl;
+			exit(-1);
+		}
+		default_microenvironment_options.dirichlet_condition_file = argument_parser.path_to_ic_dc_file;
+	}
+	else
+	{
+		node = xml_find_node( root_node , "microenvironment_setup" );
+		node = xml_find_node( node , "options" );
+		node = xml_find_node(node, "dirichlet_nodes");
+		if (node)
+		{
+			default_microenvironment_options.dirichlet_condition_from_file_enabled = node.attribute("enabled").as_bool();
+			if (default_microenvironment_options.dirichlet_condition_from_file_enabled)
+			{
+				default_microenvironment_options.dirichlet_condition_file_type = node.attribute("type").as_string();
+				default_microenvironment_options.dirichlet_condition_file = xml_get_string_value(node, "filename");
+			}
+		}
+	}
+	if (default_microenvironment_options.dirichlet_condition_from_file_enabled)
+	{
+		std::string default_basename_dcs = default_microenvironment_options.dirichlet_condition_file_type == "matlab" ? "dcs.mat" : "dcs.csv";
+		copy_file_to_output(default_microenvironment_options.dirichlet_condition_file);
+	}
 	return true;  
 }
 
 bool setup_microenvironment_from_XML( void )
 { return setup_microenvironment_from_XML( physicell_config_root ); }
 
+void ArgumentParser::parse(int argc, char **argv)
+{ // read arguments
+	int opt;
+	static struct option long_options[] = {
+		{"config", required_argument, 0, 'c'},
+		{"ic-cells", required_argument, 0, 'i'},
+		{"ic-substrates", required_argument, 0, 's'},
+		{"ic-ecm", required_argument, 0, 'e'},
+		{"ic-dc", required_argument, 0, 'd'},
+		{"rules", required_argument, 0, 'r'},
+		{"intracellular", required_argument, 0, 'n'},
+		{"output", required_argument, 0, 'o'},
+		{0, 0, 0, 0}};
+
+	while ((opt = getopt_long(argc, argv, "c:i:s:e:d:r:n:o:", long_options, NULL)) != -1)
+	{
+		switch (opt)
+		{
+		case 'c':
+			config_file_flagged = true;
+			path_to_config_file = optarg;
+			break;
+		case 'i':
+			path_to_ic_cells_file = optarg;
+			break;
+		case 's':
+			path_to_ic_substrate_file = optarg;
+			break;
+		case 'e':
+			path_to_ic_ecm_file = optarg;
+			break;
+		case 'd':
+			path_to_ic_dc_file = optarg;
+			break;
+		case 'r':
+			path_to_rules_file = optarg;
+			break;
+		case 'n':
+			path_to_intracellular_mappings_file = optarg;
+			break;
+		case 'o':
+			path_to_output_folder = optarg;
+			break;
+		default:
+			print_usage(std::cerr, argv[0]);
+			exit(-1);
+		}
+	}
+
+	if (optind == argc - 1 && !config_file_flagged) // config file not flagged and passed in as unflagged argument
+	{
+		path_to_config_file = argv[optind];
+	}
+	else if (optind < argc - 1 || (optind == argc - 1 && config_file_flagged)) // too many unflagged arguments OR config file passed in as both flagged and unflagged arguments
+	{
+		print_usage(std::cerr, argv[0]);
+		exit(-1);
+	}
+}
+
+void ArgumentParser::print_usage(std::ostream& os, const char* program_name)
+{
+	std::string options_requiring_flag = "[-i path_to_ic_cells_file] [-s path_to_ic_substrate_file] [-e path_to_ic_ecm_file] [-d path_to_ic_dc_file] [-r path_to_rules_file] [-n path_to_intracellular_file] [-o path_to_output_folder]";
+	os << "Usage:" << std::endl
+	   << "   " << program_name << " [-c path_to_config_file] " << options_requiring_flag << std::endl << std::endl
+	   << "Or:" << std::endl
+	   << "   " << program_name << " path_to_config_file " << options_requiring_flag << std::endl;
+}
+
+
+/**
+ * @brief Reads intracellular files based on the provided configuration and cell definition.
+ *
+ * This function attempts to read intracellular mappings from an XML file specified by the 
+ * `path_to_intracellular_mappings_file`. If the file is not provided, it will look in the 
+ * configuration node as usual. It ensures that there is only one intracellular mapping per 
+ * cell type and sets the intracellular files accordingly. If this file is found and a mapping
+ * is found for the given cell definition and intracellular type, the function will set the
+ * intracellular files, but not the parameters which are set in the config file.
+ *
+ * @param node_config_intracellular The XML node containing the intracellular configuration.
+ * @param cell_definition The name of the cell definition to look for in the mappings file.
+ * @param intracellular_type The type of intracellular model to look for.
+ * @return true if either no intracellular file was passed in at the command line or intracellular
+ *         mappings are found and set, false otherwise.
+ *
+ * @throws std::runtime_error if there are errors in loading or parsing the XML file, or if 
+ *         multiple mappings are found where only one is expected.
+ */
+bool ArgumentParser::read_intracellular_files(pugi::xml_node& node_config_intracellular, const std::string &cell_definition, const std::string &intracellular_type)
+{
+	bool uses_intracellular = path_to_intracellular_mappings_file==""; // if an intracellular file was not passed in at the command line, then go ahead and look in the config as normal
+	if (uses_intracellular)
+	{ return uses_intracellular; }
+
+	pugi::xml_document physicell_intracellular_mappings_doc;
+
+	pugi::xml_parse_result result = physicell_intracellular_mappings_doc.load_file( path_to_intracellular_mappings_file.c_str() );
+	if( result.status != pugi::xml_parse_status::status_ok )
+	{
+		std::cerr << "ERROR: loading " << path_to_intracellular_mappings_file << " failed!" << std::endl; 
+		exit(-1);
+	}
+
+	pugi::xml_node mappings_root = physicell_intracellular_mappings_doc.child("PhysiCell_intracellular_mappings");
+	pugi::xml_node node_cell_definitions = mappings_root.child("cell_definitions");
+	if (!node_cell_definitions)
+	{
+		std::cerr << "ERROR: No cell_definitions node found in " << path_to_intracellular_mappings_file << "!" << std::endl;
+		exit(-1);
+	}
+	pugi::xml_node node_cell_definition = node_cell_definitions.child("cell_definition");
+	pugi::xml_node node_this_cell_definition;
+	bool found = false;
+	while (node_cell_definition)
+	{
+		std::string cell_definition_name = node_cell_definition.attribute("name").value();
+		if (cell_definition_name == cell_definition)
+		{
+			if (found)
+			{
+				std::cerr << "ERROR: Multiple elements for cell definition " << cell_definition << " found in " << path_to_intracellular_mappings_file << "!" << std::endl;
+				exit(-1);
+			}
+			node_this_cell_definition = node_cell_definition;
+			found = true;
+		}
+		node_cell_definition = node_cell_definition.next_sibling("cell_definition");
+	}
+
+	if (!found)
+	{ return false; } // no intracellular mappings for this cell type
+
+	pugi::xml_node node_intracellular_ids = node_this_cell_definition.child("intracellular_ids");
+	if (!node_intracellular_ids)
+	{
+		std::cerr << "ERROR: No intracellulars node found for cell definition " << cell_definition << " in " << path_to_intracellular_mappings_file << "!" << std::endl;
+		exit(-1);
+	}
+	pugi::xml_node node_ID = node_intracellular_ids.child("ID");
+	bool one_id_found = false; // for now, we will enforce only one intracellular mapping per cell type
+	std::vector<std::string> intracellular_ids;
+	while (node_ID)
+	{
+		if (one_id_found)
+		{
+			std::cerr << "ERROR: Multiple intracellular IDs found for cell definition " << cell_definition << " in " << path_to_intracellular_mappings_file << "! This is not (yet) allowed." << std::endl;
+			exit(-1);
+		}
+		one_id_found = true;
+		intracellular_ids.push_back(node_ID.text().get());
+		node_ID = node_ID.next_sibling("ID");
+	}
+
+	if (!one_id_found)
+	{ return false; } // reaching here (currently) means that there are no intracellular mappings for this cell type. above, we handle the case of finding 2+
+
+	pugi::xml_node node_intracellulars = mappings_root.child("intracellulars");
+	if (!node_intracellulars)
+	{
+		std::cerr << "ERROR: No intracellulars node found in " << path_to_intracellular_mappings_file << "!" << std::endl;
+		exit(-1);
+	}
+
+	pugi::xml_node node_intracellular = node_intracellulars.child("intracellular");
+	pugi::xml_node node_this_intracellular;
+	found = false;
+	while (node_intracellular)
+	{
+		std::string node_intracellular_type = node_intracellular.attribute("type").value();
+		if (node_intracellular_type != intracellular_type)
+		{
+			node_intracellular = node_intracellular.next_sibling("intracellular");
+			continue;
+		}
+
+		std::string intracellular_id = node_intracellular.attribute("ID").value();
+		if (std::find(intracellular_ids.begin(), intracellular_ids.end(), intracellular_id) == intracellular_ids.end()) // probably need to restructure if/when we allow multiple models per cell type
+		{
+			node_intracellular = node_intracellular.next_sibling("intracellular");
+			continue;
+		}
+
+		if (found)
+		{
+			std::cerr << "ERROR: Multiple intracellular elements with ID " << intracellular_id << " found in " << path_to_intracellular_mappings_file << "!" << std::endl;
+			exit(-1);
+		}
+
+		node_this_intracellular = node_intracellular;
+		found = true;
+		node_intracellular = node_intracellular.next_sibling("intracellular");
+	}
+
+	if (!found)
+	{
+		std::cerr << "ERROR: No intracellular element with ID " << intracellular_ids[0] << " found in " << path_to_intracellular_mappings_file << "!" << std::endl;
+		exit(-1);
+	}
+
+	if (intracellular_type == "maboss")
+	{
+		std::cerr << "ERROR: MaBoSS intracellular model in intracellular mappings file not yet supported!" << std::endl
+				  << "You must remove the MaBoSS model from the mappings file and use the config file to specify the MaBoSS model." << std::endl;
+		exit(-1);
+	}
+
+	std::string base_path_to_filename = path_to_intracellular_mappings_file.substr(0, path_to_intracellular_mappings_file.find_last_of(".")) + "_" + cell_definition + "_ID" + intracellular_ids[0];
+	set_intracellular_files(node_config_intracellular, node_this_intracellular, base_path_to_filename, intracellular_type);
+	return true; // intracellular mappings found for this cell type, so we will use them
+}
+
+void set_intracellular_files(pugi::xml_node &node_config_intracellular, const pugi::xml_node &node_this_intracellular, const std::string &base_path_to_filename, const std::string &intracellular_type)
+{
+	if (intracellular_type == "maboss")
+	{
+		// base_path_to_filename will not just used just to append .xml as below
+		std::cerr << "ERROR: MABOSS intracellular model in intracellular mappings file not yet supported!" << std::endl;
+		exit(-1);
+	}
+	else if (intracellular_type == "roadrunner" || intracellular_type == "dfba")
+	{
+		std::string rr_filename = base_path_to_filename + "_" + intracellular_type + ".xml";
+		// determine if file exists already
+		if (std::ifstream(rr_filename))
+		{ return; }
+		pugi::xml_node node_rr_root = node_this_intracellular.child("sbml");
+		pugi::xml_document rr_doc;
+		rr_doc.append_copy(node_rr_root);
+		rr_doc.save_file(rr_filename.c_str());
+		pugi::xml_node node_sbml_filename = node_config_intracellular.child("sbml_filename");
+		if (!node_sbml_filename)
+		{
+			node_sbml_filename = node_config_intracellular.append_child("sbml_filename");
+			node_sbml_filename.append_child( pugi::node_pcdata );
+		}
+		if (!node_sbml_filename.first_child().set_value(rr_filename.c_str()))
+		{
+			std::cerr << "ERROR: Failed to set sbml_filename in config file!" << std::endl;
+			exit(-1);
+		}
+	}
+	else
+	{
+		std::cerr << "ERROR: Intracellular model type " << intracellular_type << " not recognized!" << std::endl;
+		exit(-1);
+	}
+	return;
+}
 }; 
