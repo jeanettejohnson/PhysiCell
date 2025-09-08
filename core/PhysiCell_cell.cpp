@@ -609,10 +609,15 @@ Cell* Cell::divide( )
 	rand_vec *= radius; // multiply direction times the displacement 
 	*/
 	
+	// direction to displace daughter cell
 	std::vector<double> rand_vec = cell_division_orientation(); 
+	// make it orthogonal to the cell's orientation
 	rand_vec = rand_vec- phenotype.geometry.polarity*(rand_vec[0]*state.orientation[0]+ 
 		rand_vec[1]*state.orientation[1]+rand_vec[2]*state.orientation[2])*state.orientation;	
-	rand_vec *= phenotype.geometry.radius;
+	// make sure it is a unit vector
+	normalize( &rand_vec );
+	// push the cells far enough apart to avoid strong overlap, but still maintain some overlap
+	rand_vec *= 0.5 * phenotype.geometry.radius;
 
 	child->assign_position(position[0] + rand_vec[0],
 						   position[1] + rand_vec[1],
@@ -620,8 +625,8 @@ Cell* Cell::divide( )
 						 
 	//change my position to keep the center of mass intact 
 	// and then see if I need to update my voxel index
-	static double negative_one_half = -0.5; 
-	axpy( &position, negative_one_half , rand_vec ); // position = position - 0.5*rand_vec; 
+	static double negative_one = -1.0; 
+	axpy( &position, negative_one , rand_vec ); // position = position - rand_vec; 
 
 	//If this cell has been moved outside of the boundaries, mark it as such.
 	//(If the child cell is outside of the boundaries, that has been taken care of in the assign_position function.)
