@@ -213,22 +213,49 @@ class Cycle_Model
 	std::ostream& display( std::ostream& os ); // done 
 };
 
+// A hash function for pairs of ints as keys for extended_asymmetric_division_probabilities.
+// Should follow upper-triangular variant of Cantor set to prevent collisions.
+struct pair_hash {
+	
+	std::size_t operator () (const std::pair<int, int>& pair) const
+	{
+		int lower = std::min(pair.first, pair.second);
+		int upper = std::max(pair.first, pair.second);
+		int UT = upper * (upper + 1) / 2 + lower;
+		auto hash = std::hash<int>{}(UT);
+		return hash; 
+	}
+};
+
+struct equality_function {
+	bool operator()(const std::pair<int, int>& lhs, const std::pair<int, int>& rhs) const
+	{
+		return ((lhs.first == rhs.first && lhs.second == rhs.second) || (lhs.first == rhs.second && lhs.second == rhs.first));
+	}
+};
+
 class Asymmetric_Division
 {
-private:
 public:
-	// rates of asymmetric division into different cell types 
-	std::vector<double> asymmetric_division_probabilities; 
+	std::unordered_map<std::pair<int, int>, double, pair_hash, equality_function> asymmetric_division_probabilities;
 
-	// initialization
-	Asymmetric_Division(); // done 
-	void sync_to_cell_definitions(); // done 
+	void set_asymmetric_division_probability(std::pair<int, int> types, double probability);
+	void set_asymmetric_division_probability(int upper_triangular_index, double probability);
+	void set_asymmetric_division_probability(int type_1, int type_2, double probability);
+	void set_asymmetric_division_probability(std::string type_name_1, std::string type_name_2, double probability);
+
+	double asymmetric_division_probability(std::pair<int, int> types);
+	double asymmetric_division_probability(int upper_triangular_index);
+	double asymmetric_division_probability(int type_1, int type_2);
+	double asymmetric_division_probability(std::string type_name_1, std::string type_name_2);
 
 	double probabilities_total();
 
-	// ease of access 
-	double& asymmetric_division_probability( std::string type_name ); // done
+	std::pair<int, int> select_daughter_types(int type_1, int type_2);
 };
+
+std::pair<int, int> extended_asym_index_to_upper_triangle(int index);
+std::vector<std::pair<int, int>> initialize_pairs_vector(void);
 
 class Cycle
 {
@@ -455,8 +482,9 @@ class Motility
 
 class Secretion
 {
- private:
- public:
+public:
+	typedef void (Secretion::*Advancer)(Basic_Agent *pCell, Phenotype &phenotype, double dt);
+
 	Microenvironment* pMicroenvironment; 
 	
 	std::vector<double> secretion_rates; 
@@ -470,9 +498,18 @@ class Secretion
 
 	// use this to properly size the secretion parameters to the microenvironment in 
 	// pMicroenvironment
-	void sync_to_current_microenvironment( void ); // done 
-	
-	void advance( Basic_Agent* pCell, Phenotype& phenotype , double dt ); 
+	void sync_to_current_microenvironment( void ); // done
+
+	bool prepare_advancer( Basic_Agent* pCell, Phenotype& phenotype, double dt);
+	void set_advancer(Advancer ptr) {
+        advancer = ptr;
+    }
+	void advance(Basic_Agent *pCell, Phenotype &phenotype, double dt)
+	{
+		(this->*advancer)(pCell, phenotype, dt);
+	}
+	void default_advancer( Basic_Agent* pCell, Phenotype& phenotype , double dt ); 
+	void transmembrane_diffusion_advancer( Basic_Agent* pCell, Phenotype& phenotype , double dt ); 
 	
 	// use this to properly size the secretion parameters to the microenvironment 
 	void sync_to_microenvironment( Microenvironment* pNew_Microenvironment ); // done 
@@ -487,6 +524,10 @@ class Secretion
 	double& uptake_rate( std::string name ); 
 	double& saturation_density( std::string name ); 
 	double& net_export_rate( std::string name );  	
+
+	std::string model = "default";
+private:
+	Advancer advancer;
 };
 
 class Cell_Functions
@@ -523,7 +564,8 @@ class Cell_Functions
 	void (*internal_substrate_function)(Cell* pCell, Phenotype& phenotype , double dt ); 
 	void (*molecular_model_function)(Cell* pCell, Phenotype& phenotype , double dt ); 
 */
-	
+
+	void (*response_to_ecm)(Cell* pCell, Phenotype& phenotype, double dt) = NULL;
 	
 	void (*plot_agent_SVG)(std::ofstream& os, Cell* pCell, double z_slice, std::vector<std::string> (*cell_coloring_function)(Cell*), double X_lower, double Y_lower);
 	void (*plot_agent_legend)(std::ofstream& os, Cell_Definition* cell_def, double& cursor_x, double& cursor_y, std::vector<std::string> (*cell_coloring_function)(Cell*), double temp_cell_radius);
