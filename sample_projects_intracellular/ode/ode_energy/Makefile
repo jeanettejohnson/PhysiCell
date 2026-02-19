@@ -241,16 +241,6 @@ reset:
 	rm ./config/*.cps
 	rm ./config/Toy_Metabolic_Model.xml
 
-
-FOLDER := output
-FRAMERATE := 24
-movie:
-#	mencoder "mf://snapshot*.jpg" -ovc lavc -lavcopts vcodec=mpeg4:vbitrate=10000:mbd=2:trell -mf fps=$(FRAMERATE):type=jpg -nosound -o out.avi	
-#	ffmpeg -i out.avi out.mp4 
-	ffmpeg -r $(FRAMERATE) -f image2 -i snapshot%08d.jpg -vcodec libx264 -pix_fmt yuv420p -strict -2 -tune animation -crf 15 -acodec aac out.mp4
-	#del snap*.jpg
-# archival 
-	
 checkpoint: 
 	zip -r $$(date +%b_%d_%Y_%H%M).zip Makefile *.cpp *.h config/*.xml custom_modules/* 
 	
