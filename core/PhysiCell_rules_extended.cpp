@@ -599,6 +599,13 @@ std::unique_ptr<AbstractSignal> parse_mediator_signal(pugi::xml_node mediator_no
 	{
 		base_value = xml_get_double_value(mediator_node, "base_value");
 	}
+	else if (xml_find_node(mediator_node, "type") && xml_get_string_value(mediator_node, "type") != "setter") // if the type is specified and it is not a setter, then require an explicit base value (this is the rate when both up and down signals are 0)
+	{
+		std::cerr << "XML Rules ERROR: Mediator signal must have a base value because its type is not 'setter'." << std::endl
+		          << "Must set one for this mediator with a <base_value> element:" << std::endl;
+		mediator_node.print(std::cerr);
+		exit(-1);
+	}
 	else if (std::string(mediator_node.name()) == "behavior")
 	{
 		std::string behavior = mediator_node.attribute("name").value();
