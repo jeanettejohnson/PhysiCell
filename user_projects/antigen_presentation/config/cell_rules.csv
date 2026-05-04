@@ -86,7 +86,7 @@ CD8_Tcell,ecm,increases,migration speed,6.492987575453309,4.005198891,9.99984402
 Treg,ecm,increases,migration speed,6.492987575453309,4.005198891,9.99984402,0
 CD8_exhausted,ecm,increases,migration speed,6.492987575453309,4.005198891,9.99984402,0
 CD4_Tcell,contact with apCAF,increases,transform to Treg,0.01,1.0,4,0
-epithelial_tumor_class1,duct_interior,decreases,cycle entry,0,1,4,0
-epithelial_tumor_class1_class2,duct_interior,decreases,cycle entry,0,1,4,0
-epithelial_tumor_class2,duct_interior,decreases,cycle entry,0,1,4,0
-epithelial_tumor,duct_interior,decreases,cycle entry,0,1,4,0
+epithelial_tumor_class1,duct_interior,decreases,cycle entry,0,0.1,4,0
+epithelial_tumor_class1_class2,duct_interior,decreases,cycle entry,0,0.1,4,0
+epithelial_tumor_class2,duct_interior,decreases,cycle entry,0,0.1,4,0
+epithelial_tumor,duct_interior,decreases,cycle entry,0,0.1,4,0

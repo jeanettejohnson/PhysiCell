@@ -27,7 +27,7 @@
     </parallel>
 
     <save>
-        <folder>outputs/JHH387ROI4</folder>
+        <folder>outputs/JHH387ROI1</folder>
         <full_data>
             <interval units="min">30</interval>
             <enable>true</enable>
@@ -171,7 +171,7 @@
             <calculate_gradients>true</calculate_gradients>
             <track_internalized_substrates_in_each_agent>false</track_internalized_substrates_in_each_agent>
             <initial_condition type="csv" enabled="true">
-                <filename>/Users/jeanette.johnson/PDACAntigenPresentationABMs/PhysiCell/config/collagen387ROI4.csv</filename>
+                <filename>/Users/jeanette.johnson/PDACAntigenPresentationABMs/PhysiCell/config/collagen387ROI1.csv</filename>
             </initial_condition>
             <dirichlet_nodes type="matlab" enabled="false">
                 <filename>./config/dirichlet.mat</filename>
@@ -5820,7 +5820,7 @@
     <initial_conditions>
         <cell_positions type="csv" enabled="true">
             <folder>/Users/jeanette.johnson/PDACAntigenPresentationABMs/PhysiCell/config/ics/coculture</folder>
-            <filename>JHH387ROI4.csv</filename>
+            <filename>JHH387ROI1.csv</filename>
         </cell_positions>
     </initial_conditions>
 
