@@ -47,6 +47,7 @@
 */
 
 #include "BioFVM_microenvironment.h"
+#include "BioFVM_utilities.h"
 #include "BioFVM_solvers.h"
 #include "BioFVM_vector.h"
 #include <cmath>
@@ -1303,14 +1304,15 @@ void load_initial_conditions_from_csv(std::string filename)
 		exit(-1);
 	}
 
-	// determine if header row exists 
-	std::string line; 
+	// determine if header row exists
+	std::string line;
 	std::getline( file , line );
+	trim_cr(line);
 	char c = line.c_str()[0];
 	std::vector<int> substrate_indices;
 	bool header_provided = false;
 	if( c == 'X' || c == 'x' )
-	{ 
+	{
 		if ((line.c_str()[2] != 'Y' && line.c_str()[2] != 'y') || (line.c_str()[4] != 'Z' && line.c_str()[4] != 'z'))
 		{
 			std::cout << "ERROR: Header row starts with x but then not y,z? What is this? Exiting now." << std::endl;
@@ -1353,6 +1355,7 @@ void load_initial_conditions_from_csv(std::string filename)
 		file.close();
 		std::ifstream file(filename, std::ios::in);
 		std::getline(file, line);
+		trim_cr(line);
 	}
 
 	std::cout << "Loading substrate initial conditions from CSV file " << filename << " ... " << std::endl;
@@ -1360,6 +1363,7 @@ void load_initial_conditions_from_csv(std::string filename)
 
 	while (std::getline(file, line))
 	{
+		trim_cr(line);
 		get_row_from_substrate_initial_condition_csv(voxel_is_set, line, substrate_indices, header_provided);
 	}
 
@@ -1624,15 +1628,16 @@ void load_dirichlet_conditions_from_csv(std::string filename)
 		exit(-1);
 	}
 
-	// determine if header row exists 
-	std::string line; 
+	// determine if header row exists
+	std::string line;
 	std::getline( file , line );
+	trim_cr(line);
 	char c = line.c_str()[0];
 	std::vector<int> substrate_indices;
 	bool header_provided = false;
 	int n_cols;
 	if( c == 'X' || c == 'x' )
-	{ 
+	{
 		if ((line.c_str()[2] != 'Y' && line.c_str()[2] != 'y') || (line.c_str()[4] != 'Z' && line.c_str()[4] != 'z'))
 		{
 			std::cout << "ERROR: Header row starts with x but then not y,z? What is this? Exiting now." << std::endl;
@@ -1677,6 +1682,7 @@ void load_dirichlet_conditions_from_csv(std::string filename)
 		file.close();
 		std::ifstream file(filename, std::ios::in);
 		std::getline(file, line);
+		trim_cr(line);
 	}
 
 	std::cout << "Loading substrate dirichlet conditions from CSV file " << filename << " ... " << std::endl;
@@ -1684,6 +1690,7 @@ void load_dirichlet_conditions_from_csv(std::string filename)
 
 	while (std::getline(file, line))
 	{
+		trim_cr(line);
 		get_row_from_dirichlet_condition_csv(voxel_is_set, line, substrate_indices, header_provided, n_cols);
 	}
 
