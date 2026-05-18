@@ -936,8 +936,9 @@ void parse_csv_behavior_rules(std::string path_to_file, std::string protocol, do
 
 	while( fs.eof() == false )
 	{
-		std::string line; 	
-		std::getline( fs , line, '\n'); 
+		std::string line;
+		std::getline( fs , line, '\n');
+		trim_cr(line);
 		if( line.size() > 0 )
 		{ parse_csv_behavior_rule(line); }
 	}

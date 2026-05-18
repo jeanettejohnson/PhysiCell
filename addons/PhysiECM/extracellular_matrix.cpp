@@ -218,9 +218,10 @@ void initialize_ecm_from_csv(std::string path_to_ic_ecm_file)
 		exit(-1);
 	}
 
-	// determine if header row exists 
-	std::string line; 
+	// determine if header row exists
+	std::string line;
 	std::getline( file , line );
+	trim_cr(line);
 	char c = line.c_str()[0];
 	if( c == 'X' || c == 'x' )
 	{ 
@@ -269,6 +270,7 @@ void initialize_ecm_from_csv(std::string path_to_ic_ecm_file)
 
 	while (std::getline(file, line))
 	{
+		trim_cr(line);
 		std::vector<double> data;
 		csv_to_vector(line.c_str(), data);
 
