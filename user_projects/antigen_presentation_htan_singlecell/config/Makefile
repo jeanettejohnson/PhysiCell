@@ -108,6 +108,9 @@ PhysiCell_signal_behavior.o: ./core/PhysiCell_signal_behavior.cpp
 PhysiCell_rules.o: ./core/PhysiCell_rules.cpp
 	$(COMPILE_COMMAND) -c ./core/PhysiCell_rules.cpp
 
+PhysiCell_rules_extended.o: ./core/PhysiCell_rules_extended.cpp
+	$(COMPILE_COMMAND) -c ./core/PhysiCell_rules_extended.cpp
+
 # BioFVM core components (needed by PhysiCell)
 
 BioFVM_vector.o: ./BioFVM/BioFVM_vector.cpp

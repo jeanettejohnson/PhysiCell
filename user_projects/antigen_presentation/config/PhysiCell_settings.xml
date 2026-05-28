@@ -1,10 +1,10 @@
 <PhysiCell_settings version="devel-version">
 
     <domain>
-        <x_min>-800.0</x_min>
-        <x_max>800.0</x_max>
-        <y_min>-800.0</y_min>
-        <y_max>800.0</y_max>
+        <x_min>-500.0</x_min>
+        <x_max>500.0</x_max>
+        <y_min>-270.0</y_min>
+        <y_max>270.0</y_max>
         <z_min>-10.0</z_min>
         <z_max>10.0</z_max>
         <dx>20.0</dx>
@@ -171,7 +171,7 @@
             <calculate_gradients>true</calculate_gradients>
             <track_internalized_substrates_in_each_agent>false</track_internalized_substrates_in_each_agent>
             <initial_condition type="csv" enabled="true">
-                <filename>/Users/jeanette.johnson/PDACAntigenPresentationABMs/PhysiCell/user_projects/antigen_presentation/config/ics/substrate/collagen387ROI1.csv</filename>
+                <filename>/Users/jeanette.johnson/PDACAntigenPresentationABMs/PhysiCell/config/ics/substrate/collagen317ROI2.csv</filename>
             </initial_condition>
             <dirichlet_nodes type="matlab" enabled="false">
                 <filename>./config/dirichlet.mat</filename>
@@ -6230,8 +6230,8 @@
 
     <initial_conditions>
         <cell_positions type="csv" enabled="true">
-            <folder>/Users/jeanette.johnson/PDACAntigenPresentationABMs/PhysiCell/user_projects/antigen_presentation/config/ics/JHH_IMC</folder>
-            <filename>JHH387ROI1_withductfiller.csv</filename>
+            <folder>/Users/jeanette.johnson/PDACAntigenPresentationABMs/PhysiCell/config/ics/JHH_IMC</folder>
+            <filename>JHH387ROI1_withductfiller_not_movable.csv</filename>
         </cell_positions>
     </initial_conditions>
 

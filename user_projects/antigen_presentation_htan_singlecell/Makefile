@@ -166,9 +166,6 @@ PhysiCell_basic_signaling.o: ./core/PhysiCell_basic_signaling.cpp
 PhysiCell_geometry.o: ./modules/PhysiCell_geometry.cpp
 	$(COMPILE_COMMAND) -c ./modules/PhysiCell_geometry.cpp
 
-PhysiCell_rules_extended.o: ./core/PhysiCell_rules_extended.cpp
-	$(COMPILE_COMMAND) -c ./core/PhysiCell_rules_extended.cpp
-
 # user-defined PhysiCell modules
 
 custom.o: ./custom_modules/custom.cpp
@@ -228,8 +225,8 @@ untar:
 
 FRAMERATE := 24
 OUTPUT := outputs/epi_caf_invasion
-TYPE := coculture
-TYPE_OUTPUT := $(OUTPUT)/$(TYPE)
+TYPE :=
+TYPE_OUTPUT = $(if $(strip $(TYPE)),$(OUTPUT)/$(TYPE),$(OUTPUT))
 MOVIENAME := out
 
 explain_type_output:
