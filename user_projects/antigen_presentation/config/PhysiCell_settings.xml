@@ -3,8 +3,8 @@
     <domain>
         <x_min>-500.0</x_min>
         <x_max>500.0</x_max>
-        <y_min>-270.0</y_min>
-        <y_max>270.0</y_max>
+        <y_min>-500.0</y_min>
+        <y_max>500.0</y_max>
         <z_min>-10.0</z_min>
         <z_max>10.0</z_max>
         <dx>20.0</dx>
@@ -27,7 +27,7 @@
     </parallel>
 
     <save>
-        <folder>outputs/JHH387ROI1</folder>
+        <folder>outputs/JHH317ROI4</folder>
         <full_data>
             <interval units="min">30</interval>
             <enable>true</enable>
@@ -171,7 +171,7 @@
             <calculate_gradients>true</calculate_gradients>
             <track_internalized_substrates_in_each_agent>false</track_internalized_substrates_in_each_agent>
             <initial_condition type="csv" enabled="true">
-                <filename>/Users/jeanette.johnson/PDACAntigenPresentationABMs/PhysiCell/config/ics/substrate/collagen317ROI2.csv</filename>
+                <filename>/Users/jeanette.johnson/PDACAntigenPresentationABMs/PhysiCell/config/ics/substrate/collagen317ROI4.csv</filename>
             </initial_condition>
             <dirichlet_nodes type="matlab" enabled="false">
                 <filename>./config/dirichlet.mat</filename>
@@ -242,9 +242,9 @@
                     </model>
                 </death>
                 <volume>
-                    <total units="micron^3">2494</total>
+                    <total units="micron^3">1247.0</total>
                     <fluid_fraction units="dimensionless">0.75</fluid_fraction>
-                    <nuclear units="micron^3">540</nuclear>
+                    <nuclear units="micron^3">270.0</nuclear>
                     <fluid_change_rate units="1/min">0.05</fluid_change_rate>
                     <cytoplasmic_biomass_change_rate units="1/min">0.0045</cytoplasmic_biomass_change_rate>
                     <nuclear_biomass_change_rate units="1/min">0.0055</nuclear_biomass_change_rate>
@@ -528,9 +528,9 @@
                     </model>
                 </death>
                 <volume>
-                    <total units="micron^3">2494</total>
+                    <total units="micron^3">1247.0</total>
                     <fluid_fraction units="dimensionless">0.75</fluid_fraction>
-                    <nuclear units="micron^3">540</nuclear>
+                    <nuclear units="micron^3">270.0</nuclear>
                     <fluid_change_rate units="1/min">0.05</fluid_change_rate>
                     <cytoplasmic_biomass_change_rate units="1/min">0.0045</cytoplasmic_biomass_change_rate>
                     <nuclear_biomass_change_rate units="1/min">0.0055</nuclear_biomass_change_rate>
@@ -814,9 +814,9 @@
                     </model>
                 </death>
                 <volume>
-                    <total units="micron^3">2494</total>
+                    <total units="micron^3">1247.0</total>
                     <fluid_fraction units="dimensionless">0.75</fluid_fraction>
-                    <nuclear units="micron^3">540</nuclear>
+                    <nuclear units="micron^3">270.0</nuclear>
                     <fluid_change_rate units="1/min">0.05</fluid_change_rate>
                     <cytoplasmic_biomass_change_rate units="1/min">0.0045</cytoplasmic_biomass_change_rate>
                     <nuclear_biomass_change_rate units="1/min">0.0055</nuclear_biomass_change_rate>
@@ -1100,9 +1100,9 @@
                     </model>
                 </death>
                 <volume>
-                    <total units="micron^3">2494</total>
+                    <total units="micron^3">1247.0</total>
                     <fluid_fraction units="dimensionless">0.75</fluid_fraction>
-                    <nuclear units="micron^3">540</nuclear>
+                    <nuclear units="micron^3">270.0</nuclear>
                     <fluid_change_rate units="1/min">0.05</fluid_change_rate>
                     <cytoplasmic_biomass_change_rate units="1/min">0.0045</cytoplasmic_biomass_change_rate>
                     <nuclear_biomass_change_rate units="1/min">0.0055</nuclear_biomass_change_rate>
@@ -1386,9 +1386,9 @@
                     </model>
                 </death>
                 <volume>
-                    <total units="micron^3">2494</total>
+                    <total units="micron^3">1247.0</total>
                     <fluid_fraction units="dimensionless">0.75</fluid_fraction>
-                    <nuclear units="micron^3">540</nuclear>
+                    <nuclear units="micron^3">270.0</nuclear>
                     <fluid_change_rate units="1/min">0.05</fluid_change_rate>
                     <cytoplasmic_biomass_change_rate units="1/min">0.0045</cytoplasmic_biomass_change_rate>
                     <nuclear_biomass_change_rate units="1/min">0.0055</nuclear_biomass_change_rate>
@@ -1672,9 +1672,9 @@
                     </model>
                 </death>
                 <volume>
-                    <total units="micron^3">2494</total>
+                    <total units="micron^3">1247.0</total>
                     <fluid_fraction units="dimensionless">0.75</fluid_fraction>
-                    <nuclear units="micron^3">540</nuclear>
+                    <nuclear units="micron^3">270.0</nuclear>
                     <fluid_change_rate units="1/min">0.05</fluid_change_rate>
                     <cytoplasmic_biomass_change_rate units="1/min">0.0045</cytoplasmic_biomass_change_rate>
                     <nuclear_biomass_change_rate units="1/min">0.0055</nuclear_biomass_change_rate>
@@ -1958,9 +1958,9 @@
                     </model>
                 </death>
                 <volume>
-                    <total units="micron^3">2494</total>
+                    <total units="micron^3">1247.0</total>
                     <fluid_fraction units="dimensionless">0.75</fluid_fraction>
-                    <nuclear units="micron^3">540</nuclear>
+                    <nuclear units="micron^3">270.0</nuclear>
                     <fluid_change_rate units="1/min">0.05</fluid_change_rate>
                     <cytoplasmic_biomass_change_rate units="1/min">0.0045</cytoplasmic_biomass_change_rate>
                     <nuclear_biomass_change_rate units="1/min">0.0055</nuclear_biomass_change_rate>
@@ -2249,9 +2249,9 @@
                     </model>
                 </death>
                 <volume>
-                    <total units="micron^3">2494</total>
+                    <total units="micron^3">1247.0</total>
                     <fluid_fraction units="dimensionless">0.75</fluid_fraction>
-                    <nuclear units="micron^3">540</nuclear>
+                    <nuclear units="micron^3">270.0</nuclear>
                     <fluid_change_rate units="1/min">0.05</fluid_change_rate>
                     <cytoplasmic_biomass_change_rate units="1/min">0.0045</cytoplasmic_biomass_change_rate>
                     <nuclear_biomass_change_rate units="1/min">0.0055</nuclear_biomass_change_rate>
@@ -2540,9 +2540,9 @@
                     </model>
                 </death>
                 <volume>
-                    <total units="micron^3">2494</total>
+                    <total units="micron^3">1247.0</total>
                     <fluid_fraction units="dimensionless">0.75</fluid_fraction>
-                    <nuclear units="micron^3">540</nuclear>
+                    <nuclear units="micron^3">270.0</nuclear>
                     <fluid_change_rate units="1/min">0.05</fluid_change_rate>
                     <cytoplasmic_biomass_change_rate units="1/min">0.0045</cytoplasmic_biomass_change_rate>
                     <nuclear_biomass_change_rate units="1/min">0.0055</nuclear_biomass_change_rate>
@@ -2831,9 +2831,9 @@
                     </model>
                 </death>
                 <volume>
-                    <total units="micron^3">2494</total>
+                    <total units="micron^3">1247.0</total>
                     <fluid_fraction units="dimensionless">0.75</fluid_fraction>
-                    <nuclear units="micron^3">540</nuclear>
+                    <nuclear units="micron^3">270.0</nuclear>
                     <fluid_change_rate units="1/min">0.05</fluid_change_rate>
                     <cytoplasmic_biomass_change_rate units="1/min">0.0045</cytoplasmic_biomass_change_rate>
                     <nuclear_biomass_change_rate units="1/min">0.0055</nuclear_biomass_change_rate>
@@ -3122,9 +3122,9 @@
                     </model>
                 </death>
                 <volume>
-                    <total units="micron^3">2494</total>
+                    <total units="micron^3">1247.0</total>
                     <fluid_fraction units="dimensionless">0.75</fluid_fraction>
-                    <nuclear units="micron^3">540</nuclear>
+                    <nuclear units="micron^3">270.0</nuclear>
                     <fluid_change_rate units="1/min">0.05</fluid_change_rate>
                     <cytoplasmic_biomass_change_rate units="1/min">0.0045</cytoplasmic_biomass_change_rate>
                     <nuclear_biomass_change_rate units="1/min">0.0055</nuclear_biomass_change_rate>
@@ -3413,9 +3413,9 @@
                     </model>
                 </death>
                 <volume>
-                    <total units="micron^3">2494</total>
+                    <total units="micron^3">1247.0</total>
                     <fluid_fraction units="dimensionless">0.75</fluid_fraction>
-                    <nuclear units="micron^3">540</nuclear>
+                    <nuclear units="micron^3">270.0</nuclear>
                     <fluid_change_rate units="1/min">0.05</fluid_change_rate>
                     <cytoplasmic_biomass_change_rate units="1/min">0.0045</cytoplasmic_biomass_change_rate>
                     <nuclear_biomass_change_rate units="1/min">0.0055</nuclear_biomass_change_rate>
@@ -3704,9 +3704,9 @@
                     </model>
                 </death>
                 <volume>
-                    <total units="micron^3">2494</total>
+                    <total units="micron^3">1247.0</total>
                     <fluid_fraction units="dimensionless">0.75</fluid_fraction>
-                    <nuclear units="micron^3">540</nuclear>
+                    <nuclear units="micron^3">270.0</nuclear>
                     <fluid_change_rate units="1/min">0.05</fluid_change_rate>
                     <cytoplasmic_biomass_change_rate units="1/min">0.0045</cytoplasmic_biomass_change_rate>
                     <nuclear_biomass_change_rate units="1/min">0.0055</nuclear_biomass_change_rate>
@@ -3990,9 +3990,9 @@
                     </model>
                 </death>
                 <volume>
-                    <total units="micron^3">2494</total>
+                    <total units="micron^3">1247.0</total>
                     <fluid_fraction units="dimensionless">0.75</fluid_fraction>
-                    <nuclear units="micron^3">540</nuclear>
+                    <nuclear units="micron^3">270.0</nuclear>
                     <fluid_change_rate units="1/min">0.05</fluid_change_rate>
                     <cytoplasmic_biomass_change_rate units="1/min">0.0045</cytoplasmic_biomass_change_rate>
                     <nuclear_biomass_change_rate units="1/min">0.0055</nuclear_biomass_change_rate>
@@ -4276,9 +4276,9 @@
                     </model>
                 </death>
                 <volume>
-                    <total units="micron^3">2494</total>
+                    <total units="micron^3">1247.0</total>
                     <fluid_fraction units="dimensionless">0.75</fluid_fraction>
-                    <nuclear units="micron^3">540</nuclear>
+                    <nuclear units="micron^3">270.0</nuclear>
                     <fluid_change_rate units="1/min">0.05</fluid_change_rate>
                     <cytoplasmic_biomass_change_rate units="1/min">0.0045</cytoplasmic_biomass_change_rate>
                     <nuclear_biomass_change_rate units="1/min">0.0055</nuclear_biomass_change_rate>
@@ -4562,9 +4562,9 @@
                     </model>
                 </death>
                 <volume>
-                    <total units="micron^3">2494</total>
+                    <total units="micron^3">1247.0</total>
                     <fluid_fraction units="dimensionless">0.75</fluid_fraction>
-                    <nuclear units="micron^3">540</nuclear>
+                    <nuclear units="micron^3">270.0</nuclear>
                     <fluid_change_rate units="1/min">0.05</fluid_change_rate>
                     <cytoplasmic_biomass_change_rate units="1/min">0.0045</cytoplasmic_biomass_change_rate>
                     <nuclear_biomass_change_rate units="1/min">0.0055</nuclear_biomass_change_rate>
@@ -4848,9 +4848,9 @@
                     </model>
                 </death>
                 <volume>
-                    <total units="micron^3">2494</total>
+                    <total units="micron^3">1247.0</total>
                     <fluid_fraction units="dimensionless">0.75</fluid_fraction>
-                    <nuclear units="micron^3">540</nuclear>
+                    <nuclear units="micron^3">270.0</nuclear>
                     <fluid_change_rate units="1/min">0.05</fluid_change_rate>
                     <cytoplasmic_biomass_change_rate units="1/min">0.0045</cytoplasmic_biomass_change_rate>
                     <nuclear_biomass_change_rate units="1/min">0.0055</nuclear_biomass_change_rate>
@@ -5134,9 +5134,9 @@
                     </model>
                 </death>
                 <volume>
-                    <total units="micron^3">2494</total>
+                    <total units="micron^3">1247.0</total>
                     <fluid_fraction units="dimensionless">0.75</fluid_fraction>
-                    <nuclear units="micron^3">540</nuclear>
+                    <nuclear units="micron^3">270.0</nuclear>
                     <fluid_change_rate units="1/min">0.05</fluid_change_rate>
                     <cytoplasmic_biomass_change_rate units="1/min">0.0045</cytoplasmic_biomass_change_rate>
                     <nuclear_biomass_change_rate units="1/min">0.0055</nuclear_biomass_change_rate>
@@ -5420,9 +5420,9 @@
                     </model>
                 </death>
                 <volume>
-                    <total units="micron^3">2494</total>
+                    <total units="micron^3">1247.0</total>
                     <fluid_fraction units="dimensionless">0.75</fluid_fraction>
-                    <nuclear units="micron^3">540</nuclear>
+                    <nuclear units="micron^3">270.0</nuclear>
                     <fluid_change_rate units="1/min">0.05</fluid_change_rate>
                     <cytoplasmic_biomass_change_rate units="1/min">0.0045</cytoplasmic_biomass_change_rate>
                     <nuclear_biomass_change_rate units="1/min">0.0055</nuclear_biomass_change_rate>
@@ -5706,9 +5706,9 @@
                     </model>
                 </death>
                 <volume>
-                    <total units="micron^3">2494</total>
+                    <total units="micron^3">1247.0</total>
                     <fluid_fraction units="dimensionless">0.75</fluid_fraction>
-                    <nuclear units="micron^3">540</nuclear>
+                    <nuclear units="micron^3">270.0</nuclear>
                     <fluid_change_rate units="1/min">0.05</fluid_change_rate>
                     <cytoplasmic_biomass_change_rate units="1/min">0.0045</cytoplasmic_biomass_change_rate>
                     <nuclear_biomass_change_rate units="1/min">0.0055</nuclear_biomass_change_rate>
@@ -5997,9 +5997,9 @@
                     </model>
                 </death>
                 <volume>
-                    <total units="micron^3">2494</total>
+                    <total units="micron^3">1247.0</total>
                     <fluid_fraction units="dimensionless">0.75</fluid_fraction>
-                    <nuclear units="micron^3">540</nuclear>
+                    <nuclear units="micron^3">270.0</nuclear>
                     <fluid_change_rate units="1/min">0.05</fluid_change_rate>
                     <cytoplasmic_biomass_change_rate units="1/min">0.0045</cytoplasmic_biomass_change_rate>
                     <nuclear_biomass_change_rate units="1/min">0.0055</nuclear_biomass_change_rate>
@@ -6231,7 +6231,7 @@
     <initial_conditions>
         <cell_positions type="csv" enabled="true">
             <folder>/Users/jeanette.johnson/PDACAntigenPresentationABMs/PhysiCell/config/ics/JHH_IMC</folder>
-            <filename>JHH387ROI1_withductfiller_not_movable.csv</filename>
+            <filename>JHH317ROI4_withTreg.csv</filename>
         </cell_positions>
     </initial_conditions>
 

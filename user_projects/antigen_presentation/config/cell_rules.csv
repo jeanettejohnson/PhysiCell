@@ -1,5 +1,4 @@
 epithelial_tumor,pressure,decreases,cycle entry,0,1.0,4,0
-epithelial_normal,ecm,increases,transform to mesenchymal_normal,0.01,10,4,0
 epithelial_tumor,ecm,increases,transform to mesenchymal_tumor,0.01,10,4,0
 epithelial_normal,damage,increases,apoptosis,0.023,45,16,0
 epithelial_tumor,damage,increases,apoptosis,0.023,45,16,0
