@@ -1705,23 +1705,32 @@ std::vector<std::string> paint_by_number_cell_coloring( Cell* pCell )
 	static bool setup_done = false; 
 	if( setup_done == false )
 	{
-		colors.push_back( "grey" ); // default color will be grey 
+		colors.push_back( "palegreen" ); 
 
-		colors.push_back( "red" );
-		colors.push_back( "yellow" ); 	
+		colors.push_back( "lightcyan" );
+		colors.push_back( "yellow" ); 	// fibroblast
 		colors.push_back( "green" ); 	
 		colors.push_back( "blue" ); 
 		
 		colors.push_back( "magenta" ); 	
-		colors.push_back( "orange" ); 	
-		colors.push_back( "lime" ); 	
-		colors.push_back( "cyan" );
+		colors.push_back( "darkorange" ); 	
+		colors.push_back( "maroon" ); 	
+		colors.push_back( "plum" );
 		
-		colors.push_back( "hotpink" ); 	
-		colors.push_back( "peachpuff" ); 	
-		colors.push_back( "darkseagreen" ); 	
-		colors.push_back( "lightskyblue" );
+		colors.push_back( "lightcoral" ); 	
+		colors.push_back( "papayawhip" ); 	
+		colors.push_back( "lightpink" ); 	
+		colors.push_back( "chartreuse" );
 
+		colors.push_back( "darkolivegreen" );
+		colors.push_back( "seagreen" );
+		colors.push_back( "lightskyblue" );
+		colors.push_back( "dodgerblue" );
+		colors.push_back( "royalblue" );
+
+		colors.push_back( "grey" ); // apCAFs
+		colors.push_back( "white" );
+		colors.push_back( "tan" );
 		setup_done = true; 
 	}
 	
@@ -1732,7 +1741,7 @@ std::vector<std::string> paint_by_number_cell_coloring( Cell* pCell )
 	// paint by number -- by cell type 
 	
 	std::string interior_color = "white"; 
-	if( pCell->type < 13 )
+	if( pCell->type < colors.size() )
 	{ interior_color = colors[ pCell->type ]; }
 	
 	output[0] = interior_color; // set cytoplasm color 
