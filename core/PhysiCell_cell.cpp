@@ -168,12 +168,13 @@ Cell_Definition::Cell_Definition()
 	// bug fix July 31 2023
 	
 	functions.set_orientation = NULL;
-	
+
+	functions.response_to_ecm = NULL;
+
 	// new March 2022 : make sure Cell_Interactions and Cell_Transformations 
 	// 					are appropriately sized. Same on motiltiy. 
 	phenotype.cell_interactions.sync_to_cell_definitions(); 
 	phenotype.cell_transformations.sync_to_cell_definitions(); 
-	phenotype.cycle.asymmetric_division.sync_to_cell_definitions();
 	phenotype.motility.sync_to_current_microenvironment(); 
 	phenotype.mechanics.sync_to_cell_definitions(); 
 	
@@ -262,8 +263,11 @@ void Cell::update_motility_vector( double dt_ )
 		phenotype.motility.motility_vector.assign( 3, 0.0 ); 
 		return; 
 	}
-	
-	if( UniformRandom() < dt_ / phenotype.motility.persistence_time || phenotype.motility.persistence_time < dt_ )
+
+	static bool is_first_time = true;
+	is_first_time &= PhysiCell_globals.current_time == 0; // is_first_time starts true; switches to false the first time the current time is !=0 here; then stays false forever
+
+	if(is_first_time || UniformRandom() < dt_ / phenotype.motility.persistence_time || phenotype.motility.persistence_time < dt_ )
 	{
 		/*
 		// choose a uniformly random unit vector 
@@ -321,7 +325,7 @@ void Cell::advance_bundled_phenotype_functions( double dt_ )
 	// New March 2023 in Version 1.12.0 
 	// call the rules-based code to update the phenotype 
 	if( PhysiCell_settings.rules_enabled )
-	{ apply_ruleset( this ); }
+	{ apply_behavior_ruleset( this ); }
 	if( get_single_signal(this,"necrotic") > 0.5 )
 	{
 		double rupture = this->phenotype.volume.rupture_volume; 
@@ -422,6 +426,8 @@ Cell::Cell()
 	
 	is_movable = true;
 	is_out_of_domain = false;
+	generation = 0;		// linaeage tracking from rheiland
+    parentID = -1;   // overridden in create_cell() and divide() linaeage tracing from rheiland
 	displacement.resize(3,0.0); // state? 
 	
 	assign_orientation();
@@ -570,6 +576,14 @@ Cell* Cell::divide( )
 	
 	Cell* child = create_cell(functions.instantiate_cell);
 	child->copy_data( this );	
+	// lineage tracking from rheiland
+    generation = generation + 1;     // this (parent) cell has its generation incremented
+    child->generation = generation;  // daughter cell has the same generation
+    // child->generation = generation + 1;
+    // child->parentID = parentID;
+    parentID = ID;
+    child->parentID = ID;
+	// end lineage tracking
 	child->copy_function_pointers(this);
 	child->parameters = parameters;
 	
@@ -609,10 +623,26 @@ Cell* Cell::divide( )
 	rand_vec *= radius; // multiply direction times the displacement 
 	*/
 	
-	std::vector<double> rand_vec = cell_division_orientation(); 
-	rand_vec = rand_vec- phenotype.geometry.polarity*(rand_vec[0]*state.orientation[0]+ 
-		rand_vec[1]*state.orientation[1]+rand_vec[2]*state.orientation[2])*state.orientation;	
-	rand_vec *= phenotype.geometry.radius;
+	// direction to displace daughter cell
+	std::vector<double> rand_vec; 
+	if( this->functions.cell_division_direction_function )
+	{ 
+		rand_vec = this->functions.cell_division_direction_function( this ); 
+        if( default_microenvironment_options.simulate_2D == true )  // ensure vec in XY plane
+	        { rand_vec[2] = 0.0; }
+	}
+	else
+	{
+		rand_vec = cell_division_orientation(); 
+		// make it orthogonal to the cell's orientation
+		rand_vec = rand_vec- phenotype.geometry.polarity*(rand_vec[0]*state.orientation[0]+ 
+			rand_vec[1]*state.orientation[1]+rand_vec[2]*state.orientation[2])*state.orientation;	
+	}
+
+	// make sure it is a unit vector
+	normalize( &rand_vec );
+	// push the cells far enough apart to avoid strong overlap, but still maintain some overlap
+	rand_vec *= 0.5 * phenotype.geometry.radius;
 
 	child->assign_position(position[0] + rand_vec[0],
 						   position[1] + rand_vec[1],
@@ -620,8 +650,8 @@ Cell* Cell::divide( )
 						 
 	//change my position to keep the center of mass intact 
 	// and then see if I need to update my voxel index
-	static double negative_one_half = -0.5; 
-	axpy( &position, negative_one_half , rand_vec ); // position = position - 0.5*rand_vec; 
+	static double negative_one = -1.0; 
+	axpy( &position, negative_one , rand_vec ); // position = position - rand_vec; 
 
 	//If this cell has been moved outside of the boundaries, mark it as such.
 	//(If the child cell is outside of the boundaries, that has been taken care of in the assign_position function.)
@@ -822,7 +852,8 @@ void Cell::turn_off_reactions(double dt)
 		phenotype.secretion.secretion_rates[i] = 0.0; 
 		phenotype.secretion.net_export_rates[i] = 0.0; 
 	}
-	set_internal_uptake_constants(dt);
+	// set_internal_uptake_constants(dt);
+	set_volume_is_changed(true);
 	
 	return; 
 }
@@ -867,7 +898,7 @@ void Cell::update_position( double dt )
 	if( default_microenvironment_options.simulate_2D == true )
 	{ velocity[2] = 0.0; }
 	
-	std::vector<double> old_position(position); 
+	// std::vector<double> old_position(position); 
 	axpy( &position , d1 , velocity );  
 	axpy( &position , d2 , previous_velocity );  
 	// overwrite previous_velocity for future use 
@@ -1072,13 +1103,12 @@ void Cell::add_potentials(Cell* other_agent)
 Cell* create_cell( Cell* (*custom_instantiate)())
 {
 	Cell* pNew; 
-	
 	if (custom_instantiate) {
 		pNew = custom_instantiate();
 	} else {
 		pNew = standard_instantiate_cell();
 	}
-	
+	pNew->parentID = pNew->ID; // lineage tracking from rheiland
 	(*all_cells).push_back( pNew ); 
 	pNew->index=(*all_cells).size()-1;
 	
@@ -1121,8 +1151,8 @@ Cell* create_cell( Cell_Definition& cd )
 	
 	pNew->assign_orientation();
 	
-	pNew->set_total_volume( pNew->phenotype.volume.total ); 
-	
+	pNew->set_total_volume( pNew->phenotype.volume.total );
+
 	return pNew; 
 }
 
@@ -1362,7 +1392,8 @@ void Cell::ingest_cell( Cell* pCell_to_eat )
 		pCell_to_eat->functions.update_phenotype = NULL; 
 		pCell_to_eat->functions.contact_function = NULL; 
 		pCell_to_eat->functions.cell_division_function = NULL; 
-		
+		pCell_to_eat->functions.cell_division_direction_function = NULL; 
+
 		// should set volume fuction to NULL too! 
 		pCell_to_eat->functions.volume_update_function = NULL; 
 
@@ -1613,6 +1644,7 @@ void Cell::fuse_cell( Cell* pCell_to_fuse )
 		pCell_to_fuse->functions.update_phenotype = NULL; 
 		pCell_to_fuse->functions.contact_function = NULL; 
 		pCell_to_fuse->functions.cell_division_function = NULL; 
+		pCell_to_fuse->functions.cell_division_direction_function = NULL; 
 		pCell_to_fuse->functions.volume_update_function = NULL; 
 
 		// remove all adhesions 
@@ -1653,7 +1685,8 @@ void Cell::lyse_cell( void )
 	functions.update_phenotype = NULL; 
 	functions.contact_function = NULL; 
 	functions.cell_division_function = NULL; 
-	
+	functions.cell_division_direction_function = NULL; 
+
 	// remove all adhesions 
 	
 	remove_all_attached_cells(); 
@@ -1703,7 +1736,7 @@ void prebuild_cell_definition_index_maps( void )
 		node = node.next_sibling( "cell_definition" ); 
 		n++; 
 	}	
-	
+
 	return; 
 }
 
@@ -1744,6 +1777,13 @@ void display_ptr_as_bool( void (*ptr)(Cell*,Phenotype&,Cell*,Phenotype&,double),
 }
 
 void display_ptr_as_bool( void (*ptr)(Cell*,Cell*), std::ostream& os )
+{
+	if( ptr )
+	{ os << "true"; return; }
+	os << "false"; 
+	return;
+}
+void display_ptr_as_bool( std::vector<double> (*ptr)(Cell*), std::ostream& os )
 {
 	if( ptr )
 	{ os << "true"; return; }
@@ -1836,7 +1876,9 @@ void display_cell_definitions( std::ostream& os )
 		os << std::endl; 
 		os << "\t\t cell division function: "; display_ptr_as_bool( pCF->cell_division_function , std::cout ); 
 		os << std::endl; 
-		
+		os << "\t\t cell division direction function: "; display_ptr_as_bool( pCF->cell_division_direction_function , std::cout ); 
+		os << std::endl; 
+
 		// summarize motility 
 		
 		Motility* pM = &(pCD->phenotype.motility); 
@@ -2073,8 +2115,6 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 			// transformation 
 			pCD->phenotype.cell_transformations.transformation_rates.assign(number_of_cell_defs,0.0); 
 
-			// asymmetric division
-			pCD->phenotype.cycle.asymmetric_division.asymmetric_division_probabilities.assign(number_of_cell_defs,0.0);
 		}
 		else 
 		{
@@ -2112,7 +2152,6 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 	// this requires that prebuild_cell_definition_index_maps was already run 
 	pCD->phenotype.cell_interactions.sync_to_cell_definitions(); 
 	pCD->phenotype.cell_transformations.sync_to_cell_definitions(); 
-	pCD->phenotype.cycle.asymmetric_division.sync_to_cell_definitions();
 	pCD->phenotype.mechanics.sync_to_cell_definitions(); 
 	
 	// set the reference phenotype 
@@ -2268,8 +2307,13 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 		node = node.child( "standard_asymmetric_division" );
 		if( node && node.attribute("enabled").as_bool() )
 		{
+			pugi::xml_node node_EAD = cd_node.child( "phenotype" ).child( "cycle" ).child( "extended_asymmetric_division" );
+			if( node_EAD && node_EAD.attribute("enabled").as_bool() )
+			{
+				std::cerr << "Error: Both standard and extended asymmetric division enabled for cell type " + pCD->name << std::endl;
+				exit(-1);
+			}
 			Asymmetric_Division *pAD = &(pCD->phenotype.cycle.asymmetric_division);
-
 			// asymmetric division rates
 			pugi::xml_node node_adp = node.child( "asymmetric_division_probability");
 			while (node_adp)
@@ -2285,7 +2329,7 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 					int target_index = search->second;
 
 					double asymmetric_division_probability = xml_get_my_double_value(node_adp);
-					pAD->asymmetric_division_probabilities[target_index] = asymmetric_division_probability;
+					pAD->set_asymmetric_division_probability(pCD->type, target_index, asymmetric_division_probability);
 				}
 				else
 				{
@@ -2296,14 +2340,50 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 				}
 				node_adp = node_adp.next_sibling("asymmetric_division_probability");
 			}
-			std::cout << "Asymmetric division probabilities for " << pCD->name << ": ";
-			for (int i = 0; i < pAD->asymmetric_division_probabilities.size(); i++)
+			pCD->functions.cell_division_function = asymmetric_division_function;
+		}
+
+		node = cd_node.child( "phenotype" );
+		node = node.child( "cycle" );
+		node = node.child( "extended_asymmetric_division" );
+		if( node && node.attribute("enabled").as_bool() )
+		{
+			Asymmetric_Division *pAD = &(pCD->phenotype.cycle.asymmetric_division);
+
+			// asymmetric division rates
+			pugi::xml_node node_eadp = node.child( "extended_asymmetric_division_probability" );
+
+			while (node_eadp)
 			{
-				std::cout << pAD->asymmetric_division_probabilities[i] << " ";
+				// get the name of the target cell type
+				std::string first_target_name = node_eadp.attribute("name1").value();
+				std::string second_target_name = node_eadp.attribute("name2").value();
+				// now find its index
+				auto first_search = cell_definition_indices_by_name.find(first_target_name);
+				auto second_search = cell_definition_indices_by_name.find(second_target_name);
+				
+				// safety first!
+				if( first_search == cell_definition_indices_by_name.end() || second_search == cell_definition_indices_by_name.end() )
+				{
+					std::cout << "Error: When processing the " << pCD->name << " cell definition: " << std::endl
+						<< "\tCould not find cell type " << first_target_name << " or " << second_target_name << " for asymmetric division." << std::endl
+						<< "\tRemove this cell type from the extended asymmetric division probabilities!" << std::endl << std::endl;
+					exit(-1);
+				}
+
+				// if the target is found, set the appropriate rate
+				int first_target_index = first_search->second;
+				int second_target_index = second_search->second;
+
+				double extended_asymmetric_division_probability = xml_get_my_double_value(node_eadp);
+				pAD->set_asymmetric_division_probability(first_target_index, second_target_index, extended_asymmetric_division_probability);
+
+				node_eadp = node_eadp.next_sibling("extended_asymmetric_division_probability");
 			}
 			std::cout << std::endl;
-			pCD->functions.cell_division_function = standard_asymmetric_division_function;
+			pCD->functions.cell_division_function = asymmetric_division_function;
 		}
+
 	}
 	
 	// here's what it ***should*** do: 
@@ -2313,7 +2393,6 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 	// otherwise, modify properties of that model 
 	
 	// set up the death models 
-//	int death_model_index = 0; 
 	node = cd_node.child( "phenotype" );
 	node = node.child( "death" ); 
 	if( node )
@@ -2407,9 +2486,6 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 				if( node_temp )
 				{ death_params.lysed_fluid_change_rate = xml_get_my_double_value( node_temp ); }
 
-	//			death_params.time_units = 
-	//				get_string_attribute_value( node, "unlysed_fluid_change_rate", "units" ); 
-				
 				node = node.parent(); 
 			}
 					
@@ -2417,7 +2493,6 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 			// if the model already exists, just overwrite the parameters 
             if (model == PhysiCell_constants::apoptosis_death_model) 
             {
-//					pCD->phenotype.death.add_death_model( rate , &apoptosis , apoptosis_parameters );
                 if( death_model_already_exists == false )
                 {
                     pCD->phenotype.death.add_death_model( rate , &apoptosis , death_params ); 
@@ -2432,7 +2507,6 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
             else if (model == PhysiCell_constants::necrosis_death_model) 
             {
                 // set necrosis parameters 
-//					pCD->phenotype.death.add_death_model( rate , &necrosis , necrosis_parameters );
                 if( death_model_already_exists == false )
                 {
                     pCD->phenotype.death.add_death_model( rate , &necrosis , death_params ); 
@@ -2877,7 +2951,17 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 	if( node )
 	{
 		Secretion* pS = &(pCD->phenotype.secretion);
-		
+
+		pugi::xml_attribute attr = node.attribute("model");
+		std::string model = "default";
+		pS->set_advancer(&Secretion::default_advancer);
+		if (attr)
+		{
+			model = attr.value();
+			if (model == "transmembrane_diffusion")
+			{ pS->set_advancer(&Secretion::transmembrane_diffusion_advancer); }
+		}
+
 		// find the first substrate 
 		pugi::xml_node node_sec = node.child( "substrate" );
 		while( node_sec )
@@ -2901,22 +2985,28 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 			pugi::xml_node node_sec1 = node_sec.child( "secretion_rate" ); 
 			if( node_sec1 )
 			{ pS->secretion_rates[index] = xml_get_my_double_value( node_sec1 ); }
-			
-			// secretion target 
-			node_sec1 = node_sec.child( "secretion_target" ); 
-			if( node_sec1 )
-			{ pS->saturation_densities[index] = xml_get_my_double_value( node_sec1 ); }
-	
-			// uptake rate 
-			node_sec1 = node_sec.child( "uptake_rate" ); 
-			if( node_sec1 )
-			{ pS->uptake_rates[index] = xml_get_my_double_value( node_sec1 ); }
-			
+
 			// net export rate 
 			node_sec1 = node_sec.child( "net_export_rate" ); 
 			if( node_sec1 )
 			{ pS->net_export_rates[index] = xml_get_my_double_value( node_sec1 ); }
-			
+
+			// could skip secretion_target and uptake_rate if using transmembrane_diffusion
+			if (model == "transmembrane_diffusion") {
+				node_sec = node_sec.next_sibling( "substrate" ); 
+				continue;
+			}
+
+			// secretion target 
+			node_sec1 = node_sec.child( "secretion_target" ); 
+			if( node_sec1 )
+			{ pS->saturation_densities[index] = xml_get_my_double_value( node_sec1 ); }
+
+			// uptake rate 
+			node_sec1 = node_sec.child( "uptake_rate" ); 
+			if( node_sec1 )
+			{ pS->uptake_rates[index] = xml_get_my_double_value( node_sec1 ); }
+
 			node_sec = node_sec.next_sibling( "substrate" ); 
 		}
 	}	
@@ -2937,11 +3027,6 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 			// pCI->dead_phagocytosis_rate = xml_get_my_double_value(node_dpr); 
 			dead_phagocytosis_rate = xml_get_my_double_value(node_dpr); 
 		}
-/*
-		pCI->apoptotic_phagocytosis_rate = pCI->dead_phagocytosis_rate; 
-		pCI->necrotic_phagocytosis_rate = pCI->dead_phagocytosis_rate; 
-		pCI->other_dead_phagocytosis_rate = pCI->dead_phagocytosis_rate; 
-*/
 		pCI->apoptotic_phagocytosis_rate = dead_phagocytosis_rate; 
 		pCI->necrotic_phagocytosis_rate = dead_phagocytosis_rate; 
 		pCI->other_dead_phagocytosis_rate = dead_phagocytosis_rate; 
@@ -3116,66 +3201,16 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 
 	node = cd_node.child( "phenotype" );
 
-		// intracellular
+	// intracellular
 	node = cd_node.child( "phenotype" );
-	node = node.child( "intracellular" ); 
-	if( node )
+	node = node.child("intracellular");
+	if (node)
 	{
-		std::string model_type = node.attribute( "type" ).value(); 
-		
-
-#ifdef ADDON_PHYSIBOSS
-		if (model_type == "maboss") {
-			// If it has already be copied
-			if (pParent != NULL && pParent->phenotype.intracellular != NULL) {
-				pCD->phenotype.intracellular->initialize_intracellular_from_pugixml(node);
-				
-			// Otherwise we need to create a new one
-			} else {
-				MaBoSSIntracellular* pIntra = new MaBoSSIntracellular(node);
-				pCD->phenotype.intracellular = pIntra->getIntracellularModel();
-			}
-		}
-#endif
-
-#ifdef ADDON_ROADRUNNER
-		if (model_type == "roadrunner") 
-        {
-			// If it has already be copied
-			if (pParent != NULL && pParent->phenotype.intracellular != NULL) 
-            {
-                // std::cout << "------ " << __FUNCTION__ << ": copying another\n";
-				pCD->phenotype.intracellular->initialize_intracellular_from_pugixml(node);
-            }	
-			// Otherwise we need to create a new one
-			else 
-            {
-                std::cout << "\n------ " << __FUNCTION__ << ": creating new RoadRunnerIntracellular\n";
-				RoadRunnerIntracellular* pIntra = new RoadRunnerIntracellular(node);
-				pCD->phenotype.intracellular = pIntra->getIntracellularModel();
-                pCD->phenotype.intracellular->validate_PhysiCell_tokens(pCD->phenotype);
-                pCD->phenotype.intracellular->validate_SBML_species();
-			}
-		}
-#endif
-
-#ifdef ADDON_PHYSIDFBA
-		if (model_type == "dfba") {
-			// If it has already be copied
-			if (pParent != NULL && pParent->phenotype.intracellular != NULL) {
-				pCD->phenotype.intracellular->initialize_intracellular_from_pugixml(node);
-			// Otherwise we need to create a new one
-			} else {
-				dFBAIntracellular* pIntra = new dFBAIntracellular(node);
-				pCD->phenotype.intracellular = pIntra->getIntracellularModel();
-			}
-		}
-#endif
-
-	} else{
-
+		parse_intracellular_model(node, pCD, pParent);
+	}
+	else
+	{
 		pCD->phenotype.intracellular = NULL;
-
 	}
 
 	// set up custom data 
@@ -3233,8 +3268,115 @@ Cell_Definition* initialize_cell_definition_from_pugixml( pugi::xml_node cd_node
 		// set conserved attribute 
 		node1 = node1.next_sibling(); 
 	}
-	
+
+	node = cd_node.child( "ecm_interactions" );
+	if (PhysiCell_settings.ecm_enabled && node && node.attribute("enabled").as_bool())
+	{
+#ifdef ADDON_PHYSIECM
+		std::string model_type = node.attribute("type").value();
+		if (model_type == "v1")
+		{
+			initialize_ecm_interactions_v1(node, pCD);
+		}
+		else if (model_type == "v2")
+		{
+			initialize_ecm_interactions_v2(node, pCD);
+		}
+		else
+		{
+			std::cout << "ERROR: ECM interactions type " << model_type << " is not supported." << std::endl;
+			exit(-1);
+		}
+		pCD->functions.update_velocity = ecm_based_update_cell_velocity;
+		check_ecm_remodel_parameters_provided(node, pCD);
+#else
+		std::cout << "ERROR: ECM interactions are not supported in this build." << std::endl << 
+		"\tMake sure to compile with the -D ADDON_PHYSIECM flag." << std::endl;
+		exit(-1);
+#endif
+	}
+
 	return pCD;
+}
+
+void parse_intracellular_model(pugi::xml_node node, Cell_Definition* pCD, Cell_Definition* pParent)
+{
+	std::string model_type = node.attribute( "type" ).value(); 
+	bool uses_intracellular = argument_parser.read_intracellular_files(node, pCD->name, model_type);
+	if (!uses_intracellular) {
+		return;
+	}
+
+	if (model_type == "maboss")
+	{
+#ifdef ADDON_PHYSIBOSS
+		// If it has already be copied
+		if (pParent != NULL && pParent->phenotype.intracellular != NULL)
+		{
+			pCD->phenotype.intracellular->initialize_intracellular_from_pugixml(node);
+
+			// Otherwise we need to create a new one
+		}
+		else
+		{
+			MaBoSSIntracellular *pIntra = new MaBoSSIntracellular(node);
+			pCD->phenotype.intracellular = pIntra->getIntracellularModel();
+		}
+#else
+		std::cerr << "ERROR: MaBoSS intracellular model is not supported in this build." << std::endl
+				  << "\tMake sure to compile with the -D ADDON_PHYSIBOSS flag." << std::endl;
+		exit(-1);
+#endif
+	}
+
+	else if (model_type == "roadrunner")
+	{
+#ifdef ADDON_ROADRUNNER
+		// If it has already be copied
+		if (pParent != NULL && pParent->phenotype.intracellular != NULL)
+		{
+			pCD->phenotype.intracellular->initialize_intracellular_from_pugixml(node);
+		}
+		// Otherwise we need to create a new one
+		else
+		{
+			RoadRunnerIntracellular *pIntra = new RoadRunnerIntracellular(node);
+			pCD->phenotype.intracellular = pIntra->getIntracellularModel();
+		}
+		pCD->phenotype.intracellular->validate_PhysiCell_tokens(pCD->phenotype);
+		pCD->phenotype.intracellular->validate_SBML_species();
+#else
+		std::cerr << "ERROR: RoadRunner intracellular model is not supported in this build." << std::endl
+				  << "\tMake sure to compile with the -D ADDON_ROADRUNNER flag." << std::endl;
+		exit(-1);
+#endif
+	}
+
+	else if (model_type == "dfba")
+	{
+#ifdef ADDON_PHYSIDFBA
+		// If it has already be copied
+		if (pParent != NULL && pParent->phenotype.intracellular != NULL)
+		{
+			pCD->phenotype.intracellular->initialize_intracellular_from_pugixml(node);
+			// Otherwise we need to create a new one
+		}
+		else
+		{
+			dFBAIntracellular *pIntra = new dFBAIntracellular(node);
+			pCD->phenotype.intracellular = pIntra->getIntracellularModel();
+		}
+#else
+		std::cerr << "ERROR: dFBA intracellular model is not supported in this build." << std::endl
+				  << "\tMake sure to compile with the -D ADDON_PHYSIDFBA flag." << std::endl;
+#endif
+	}
+
+	else
+	{
+		std::cerr << "ERROR: Intracellular model type " << model_type << " is not supported." << std::endl;
+		exit(-1);
+	}
 }
 
 void initialize_cell_definitions_from_pugixml( pugi::xml_node root )
