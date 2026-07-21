@@ -406,6 +406,7 @@ void Hypothesis_Rule::sync_to_cell_definition( Cell_Definition* pCD )
 	return; 
 }
 
+
 void Hypothesis_Rule::sync_to_cell_definition( std::string cell_name )
 { return sync_to_cell_definition( find_cell_definition(cell_name) ); }
 
@@ -722,6 +723,7 @@ Hypothesis_Ruleset::Hypothesis_Ruleset()
 	return; 
 }
 
+
 void Hypothesis_Ruleset::display( std::ostream& os )
 {
 	os << "Behavioral rules for cell type " << cell_type << ":" << std::endl; 
@@ -741,7 +743,6 @@ void Hypothesis_Ruleset::detailed_display( std::ostream& os )
 	os << std::endl; 
 	return; 
 }
-
 
 void Hypothesis_Ruleset::sync_to_cell_definition( Cell_Definition* pCD )
 {
@@ -800,12 +801,17 @@ Hypothesis_Rule* Hypothesis_Ruleset::add_behavior( std::string behavior , double
 	return pHR; 
 }
 
+
+
+
 Hypothesis_Rule* Hypothesis_Ruleset::add_behavior( std::string behavior )
 { 
 	double min_behavior = 9e99; // Min behaviour high value
 	double max_behavior = -9e99; // Max behaviour low value
 	return Hypothesis_Ruleset::add_behavior( behavior, min_behavior, max_behavior );
 }
+
+
 
 void Hypothesis_Ruleset::sync_to_cell_definition( std::string cell_name )
 { return sync_to_cell_definition( find_cell_definition(cell_name) ); }
@@ -1535,8 +1541,9 @@ void parse_csv_rules_v0( std::string filename )
 
 	while( fs.eof() == false )
 	{
-		std::string line; 	
-		std::getline( fs , line, '\n'); 
+		std::string line;
+		std::getline( fs , line, '\n');
+		trim_cr(line);
 		if( line.size() > 0 )
 		{ parse_csv_rule_v0(line); }
 	}
@@ -1671,8 +1678,9 @@ void parse_csv_rules_v1( std::string filename )
 
 	while( fs.eof() == false )
 	{
-		std::string line; 	
-		std::getline( fs , line, '\n'); 
+		std::string line;
+		std::getline( fs , line, '\n');
+		trim_cr(line);
 		if( line.size() > 0 )
 		{ parse_csv_rule_v1(line); }
 	}
@@ -1804,8 +1812,9 @@ void parse_csv_rules_v3( std::string filename )
 
 	while( fs.eof() == false )
 	{
-		std::string line; 	
-		std::getline( fs , line, '\n'); 
+		std::string line;
+		std::getline( fs , line, '\n');
+		trim_cr(line);
 		if( line.size() > 0 )
 		{ parse_csv_rule_v3(line); }
 	}
@@ -1817,10 +1826,206 @@ void parse_csv_rules_v3( std::string filename )
 	return; 
 }
 
-
 /* end of v2 work */
 
-// needs fixing
+void parse_xml_rules(std::string filename)
+{
+	bool physicell_rules_dom_initialized = false;
+	pugi::xml_document physicell_rules_doc;
+	pugi::xml_node physicell_rules_root;
+	std::cout << "Using rules file " << filename << " ... " << std::endl;
+	pugi::xml_parse_result result = physicell_rules_doc.load_file(filename.c_str());
+
+	if (result.status != pugi::xml_parse_status::status_ok)
+	{
+		std::cout << "Error loading " << filename << "!" << std::endl;
+		exit(-1);
+	}
+
+	physicell_rules_root = physicell_rules_doc.child("hypothesis_rulesets");
+	physicell_rules_dom_initialized = true;
+
+	pugi::xml_node ruleset_node;
+	ruleset_node = xml_find_node(physicell_rules_root, "hypothesis_ruleset");
+	std::vector<std::string> cell_definitions_ruled;
+
+	while (ruleset_node)
+	{
+		std::string cell_type = ruleset_node.attribute("name").value();
+		// check if cell_type has already had a ruleset defined for it
+		for (int i = 0; i < cell_definitions_ruled.size(); i++)
+		{
+			if (cell_type == cell_definitions_ruled[i])
+			{
+				std::cout << "XML Rules ERROR: Two rulesets for " << cell_type << " found." << std::endl
+						  << "\tCombine them into a single ruleset please :)" << std::endl
+						  << "\tSupport for rules across multiple files for the same cell type not yet supported." << std::endl;
+				exit(-1);
+			}
+		}
+		cell_definitions_ruled.push_back(cell_type);
+
+		std::vector<std::string> behaviors_ruled;
+
+		pugi::xml_node behavior_node = ruleset_node.child("behavior");
+		while (behavior_node)
+		{
+			std::string behavior = behavior_node.attribute("name").value();
+			for (int i = 0; i < behaviors_ruled.size(); i++)
+			{
+				if (behavior == behaviors_ruled[i])
+				{
+					std::cout << "XML Rules ERROR: The behavior " << behavior << " is being set again for " << cell_type << "." << std::endl
+							  << "\tSelect only one to keep. :)" << std::endl;
+					exit(-1);
+				}
+			}
+			behaviors_ruled.push_back(behavior);
+
+			process_decreasing_signals(behavior_node, cell_type, behavior);
+			process_increasing_signals(behavior_node, cell_type, behavior);
+
+			behavior_node = behavior_node.next_sibling("behavior");
+		}
+		ruleset_node = ruleset_node.next_sibling("hypothesis_ruleset");
+	}
+	return;
+}
+
+void process_decreasing_signals(pugi::xml_node behavior_node, std::string cell_type, std::string behavior)
+{
+	pugi::xml_node response_node = behavior_node.child("decreasing_signals");
+	if (!response_node)
+	{ return; }
+	std::string min_value = response_node.child_value("max_response");
+	process_signals(response_node, cell_type, behavior, "decreases", min_value);
+	return;
+}
+
+void process_increasing_signals(pugi::xml_node behavior_node, std::string cell_type, std::string behavior)
+{
+	pugi::xml_node response_node = behavior_node.child("increasing_signals");
+	if (!response_node)
+	{ return; }
+	std::string max_value = response_node.child_value("max_response");
+	process_signals(response_node, cell_type, behavior, "increases", max_value);
+	return;
+}
+
+void process_signals(pugi::xml_node response_node, std::string cell_type, std::string behavior, std::string response, std::string saturation_value_string)
+{
+	pugi::xml_node signal_node = response_node.child("signal");
+	if (!signal_node)
+	{ return; }
+	std::vector<std::string> signals_set;
+
+	std::vector<std::string> input;
+	input.resize(9);
+	input[0] = cell_type;
+	input[2] = response;
+	input[3] = behavior;
+	input[4] = saturation_value_string;
+
+	while (signal_node)
+	{
+		std::string signal = signal_node.attribute("name").value();
+
+		for (int i = 0; i < signals_set.size(); i++)
+		{
+			if (signal == signals_set[i])
+			{
+				std::cout << "XML Rules ERROR: " << signal << " " << response << " " << behavior << " for " << cell_type << std::endl
+						  << "\tis defined twice." << std::endl
+						  << "\tSelect only one to keep. :)" << std::endl;
+				exit(-1);
+			}
+		}
+		signals_set.push_back(signal);
+
+		input[1] = signal;
+		input[5] = signal_node.child_value("half_max");
+		input[6] = signal_node.child_value("hill_power");
+		input[7] = signal_node.child_value("applies_to_dead");
+		input[8] = signal_node.attribute("type").value();
+		process_signal(input);
+
+		signal_node = signal_node.next_sibling("signal");
+	}
+
+	// compare to base behavior value in cell def for discrepancies
+	Cell_Definition *pCD = find_cell_definition(cell_type);
+	double max_response = std::atof(saturation_value_string.c_str());
+	double ref_base_value = get_single_base_behavior(pCD, behavior);
+	
+
+	set_behavior_base_value(cell_type, behavior, ref_base_value);
+	if (response == "increases")
+	{
+		if (max_response < ref_base_value)
+		{
+			std::cout << "XML Rules ERROR: Signals increasing " << behavior << " for " << cell_type << std::endl
+					  << "\thave a max response < the base value." << std::endl
+					  << "\tSet max_value for " << behavior << " in " << cell_type << " as >= " << ref_base_value << "." << std::endl;
+			exit(-1);
+		}
+		set_behavior_max_value(cell_type, behavior, max_response);
+	}
+	else
+	{
+		if (max_response > ref_base_value)
+		{
+			std::cout << "XML Rules ERROR: Signals decreasing " << behavior << " for " << cell_type << std::endl
+					  << "\thave a min response > the base value." << std::endl
+					  << "\tSet min_value for " << behavior << " in " << cell_type << " as <= " << ref_base_value << "." << std::endl;
+			exit(-1);
+		}
+		set_behavior_min_value(cell_type, behavior, max_response);
+	}
+
+	std::cout << "Done processing " << response << " signals for " << behavior << " in " << cell_type << std::endl;
+	return;
+}
+
+void process_signal(std::vector<std::string> input)
+{
+	std::string temp = csv_strings_to_English_v3( input , false ); // need a v1 version of this
+
+	// string portions of the rule
+	std::string cell_type = input[0]; 
+	std::string signal = input[1]; 
+	std::string response = input[2]; 
+	std::string behavior = input[3]; 
+	std::string signal_type = input[8];
+
+	// numeric portions of the rule 
+	// double min_value  = std::atof( input[2].c_str() );
+
+	// double base_value = std::atof( input[4].c_str() );
+	double max_response = std::atof( input[4].c_str() ); 
+
+	// hmm from here 
+	// double max_value  = std::atof( input[4].c_str() ); 
+
+	std::cout << "Adding rule for " << cell_type << " cells:\n\t"; 
+	std::cout << temp << std::endl; 
+
+	// add_rule(cell_type,signal,behavior,response);  
+	bool use_for_dead = (bool)std::atof(input[7].c_str());
+	add_rule(cell_type,signal,behavior,response,use_for_dead);  
+	switch (0)
+	{
+	case 0: // Hill type
+	{
+		double half_max = std::atof(input[5].c_str());
+		double hill_power = std::atof(input[6].c_str());
+		set_hypothesis_parameters(cell_type, signal, behavior, half_max, hill_power);
+	}
+	}
+
+
+	return;
+}
+
 void parse_rules_from_pugixml( void )
 {
 	pugi::xml_node node = physicell_config_root.child( "cell_rules" ); 
@@ -1854,94 +2059,76 @@ void parse_rules_from_pugixml( void )
 		return; 
 	}
 
-	while( node )
+	while (node)
 	{
 		std::cout << node.name() << std::endl;
-		if( node.attribute("enabled").as_bool() == true )
-		{ 
-			std::string folder = xml_get_string_value( node, "folder" ); 
-			std::string filename = xml_get_string_value( node, "filename" ); 
-			std::string input_filename = folder + "/" + filename; 
+		if (node.attribute("enabled").as_bool() == true)
+		{
+			std::string folder = xml_get_string_value(node, "folder");
+			std::string filename = xml_get_string_value(node, "filename");
+			std::string input_filename = folder + "/" + filename;
 
-			std::cout << "\tProcessing ruleset in " << input_filename << " ... " << std::endl; 
-			std::string format = node.attribute("format").as_string(); 
-			std::string protocol = node.attribute("protocol").as_string(); 
-			double version = node.attribute("version").as_double(); 
+			std::string format = node.attribute("format").as_string();
+			std::string protocol = node.attribute("protocol").as_string();
+			double version = node.attribute("version").as_double();
 
-			bool done = false; 
-
-			if( format == "CSV" || format == "csv" )  
-			{ 			
-				if( version < 1.0 )
-				{
-					std::cout << "\tFormat: CSV (prototype version)" << std::endl; 
-
-					// parse_csv_rules_v0( input_filename ); // parse all rules in a CSV file 
-
-					PhysiCell_settings.rules_enabled = true; 
-
-					std::cout << "\t\t**Error: Version < 3 no longer supported.\n\n"; 
-					std::cout << "\t\tSee possible fixes at https://github.com/physicell-training/PhysiCell_common_errors\n\n"; 
-					exit(-1); 
-
-					done = true; 
-				}
-			
-				if(version >= 1.0 - 1e-10 && version < 2.0 - 1e-10 && protocol == "CBHG" && done == false )
-				{
-					std::cout << "\tFormat: CSV (version " << version << ")" << std::endl; 
-
-					// parse_csv_rules_v1( input_filename ); // parse all rules in a CSV file 
-
-					PhysiCell_settings.rules_enabled = true; 
-
-					std::cout << "\t\t**Error: Version < 3 no longer supported.\n\n"; 
-					std::cout << "\t\tSee possible fixes at https://github.com/physicell-training/PhysiCell_common_errors\n\n"; 
-					exit(-1); 
-
-					done = true; 
-				}
-
-				if(version >= 2.0 - 1e-10 && version < 3.0 - 1e-10 && protocol == "CBHG" && done == false )
-				{
-					std::cout << "\tFormat: CSV (preprint version " << version << ")" << std::endl; 
-
-					// parse_csv_rules_v2( input_filename ); // parse all rules in a CSV file 
-
-					PhysiCell_settings.rules_enabled = true; 
-
-					std::cout << "\t\t**Error: Version < 3 no longer supported.\n\n"; 
-					std::cout << "\t\tSee possible fixes at https://github.com/physicell-training/PhysiCell_common_errors\n\n"; 
-					exit(-1); 
-
-					done = true; 
-				}
-
-				if(version >= 3.0 - 1e-10 && protocol == "CBHG" && done == false )
-				{
-					std::cout << "\tFormat: CSV (current version " << version << ")" << std::endl; 
-
-					parse_csv_rules_v3( input_filename ); // parse all rules in a CSV file 
-
-					PhysiCell_settings.rules_enabled = true; 
-
-					done = true; 
-				}
-
-			}  
-
-
-			if( done == false )
-			{ std::cout << "\tWarning: Ruleset had unknown format (" << format << "). Skipping!" << std::endl; }
-			else
-			{ copy_file_to_output( input_filename ); }
-
+			parse_rules_from_file(input_filename, format, protocol, version);
 		}
 		else
-		{ std::cout << "\tRuleset disabled ... " << std::endl; }
-		node = node.next_sibling( "ruleset"); 		
+		{
+			std::cout << "\tRuleset disabled ... " << std::endl;
+		}
+		node = node.next_sibling("ruleset");
 	}
-	return; 
+	return;
+}
+
+void parse_rules_from_file(std::string path_to_file, std::string format, std::string protocol, double version) // see PhysiCell_rules.h for default values of format, protocol, and version
+{
+	std::cout << "\tProcessing ruleset in " << path_to_file << " ... " << std::endl;
+
+	// get the file  extension of path_to_file
+	if (format == "")
+	{
+		format = path_to_file.substr(path_to_file.find_last_of(".") + 1);
+	}
+	if (protocol == "")
+	{
+		protocol = "CBHG"; // default protocol (at least for CSVs)
+	}
+	if (version == -1.0)
+	{
+		version = 3.0; // default version (at least for CSVs)
+	}
+
+	std::string default_basename;
+	if (format == "CSV" || format == "csv")
+	{
+		std::cout << "\tFormat: CSV (version " << version << ")" << std::endl;
+		if (version < 3.0 - 1e-10 || version > 3.0 + 1e-10 )
+		{
+			std::cout << "\t\t**Error: Version < 3 no longer supported.\n\n";
+			std::cout << "\t\tSee possible fixes at https://github.com/physicell-training/PhysiCell_common_errors\n\n";
+			exit(-1);
+		}
+
+		parse_csv_rules_v3(path_to_file); // parse all rules in a CSV file
+		default_basename = "cell_rules.csv";
+	}
+	else if (format == "XML" || format == "xml")
+	{
+		std::cout << "\tFormat: XML" << std::endl;
+		parse_xml_rules(path_to_file);
+		default_basename = "cell_rules.xml";
+	}
+	else
+	{
+		std::cerr << "\tError: Unknown format (" << format << ") for ruleset " << path_to_file << ". Quitting!" << std::endl;
+		exit(-1);
+	}
+	PhysiCell_settings.rules_enabled = true;
+	copy_file_to_output( path_to_file, default_basename );
+	return;
 }
 
 void parse_rules_from_parameters_v0( void )
@@ -1992,7 +2179,6 @@ int Parameters<T>::find_index( std::string search_name )
 }
 
 */
-
 void stream_annotated_English_rules( std::ostream& os )
 {
 	os << "Cell Hypothesis Rules" << std::endl << std::endl; 
@@ -2345,26 +2531,36 @@ std::vector<double> UniformInShell( double r1, double r2 )
 	return { param2*sin(theta) , param2*cos(theta), param1*(1-2*T) }; 
 }
 
-void setup_cell_rules( void )
+void setup_cell_rules()
 {
-	// setup 
-	intialize_hypothesis_rulesets(); 
+	// setup
+	intialize_hypothesis_rulesets();
 
-	// load rules 
-	parse_rules_from_pugixml(); 
+	// load rules
+	if (argument_parser.path_to_rules_file != "")
+	{parse_rules_from_file(argument_parser.path_to_rules_file);} // defaults for rest of arguments found in .h file
+	else
+	{parse_rules_from_pugixml();}
 
+	record_cell_rules();
+
+	return;
+}
+
+void record_cell_rules( void )
+{
 	// display rules to screen
-	display_hypothesis_rulesets( std::cout );
+	display_hypothesis_rulesets(std::cout);
 
-	// save annotations 
-	save_annotated_detailed_English_rules(); 
-	save_annotated_detailed_English_rules_HTML(); 
-	save_annotated_English_rules(); 
-	save_annotated_English_rules_HTML(); 
+	// save annotations
+	save_annotated_detailed_English_rules();
+	save_annotated_detailed_English_rules_HTML();
+	save_annotated_English_rules();
+	save_annotated_English_rules_HTML();
 
-	// save dictionaries 
+	// save dictionaries
 	std::string dictionary_file = "./" + PhysiCell_settings.folder + "/dictionaries.txt";
-	std::ofstream dict_of( dictionary_file , std::ios::out ); 
+	std::ofstream dict_of(dictionary_file, std::ios::out);
 
 	// display_signal_dictionary( dict_of ); // done 
 	display_signal_dictionary_with_synonyms( dict_of ); // 
@@ -2376,8 +2572,7 @@ void setup_cell_rules( void )
 	std::string rules_file = PhysiCell_settings.folder + "/cell_rules_parsed.csv"; 
 	export_rules_csv_v3( rules_file ); 
 
-	return; 
+	return;
 }
-
 
 };

@@ -141,14 +141,29 @@ void setup_signal_behavior_dictionaries( void )
 
         map_index++; 
 	}    
-	
+
+	// current cycle phase index
+	signal_to_int["current cycle phase"] = map_index;
+	int_to_signal[map_index] = "current cycle phase";
+	// synonyms
+	signal_to_int["current cycle phase index"] = map_index;
+	signal_to_int["cycle phase"] = map_index;
+	signal_to_int["cycle phase index"] = map_index;
+
+	// elapsed time in phase
+	map_index++;
+    signal_to_int["elapsed time in phase"] = map_index;
+	int_to_signal[map_index] = "elapsed time in phase";
+	// synonyms
+	signal_to_int["time elapsed in phase"] = map_index;
+	signal_to_int["phase time"] = map_index;
+
 	// mechanical pressure 
-	// int map_index = m; 
+	map_index++;
 	signal_to_int[ "pressure"] = map_index; 
 	int_to_signal[map_index] = "pressure"; 
 
 	// total volume 
-
 	map_index++; 
 	signal_to_int[ "volume"] = map_index; 
 	int_to_signal[map_index] = "volume"; 
@@ -207,6 +222,16 @@ void setup_signal_behavior_dictionaries( void )
 	int_to_signal[map_index] = "contact with basement membrane"; 
 	// synonym
 	signal_to_int["contact with BM"] = map_index; 
+
+	// number of attachments
+	map_index++;
+	signal_to_int["number of attachments"] = map_index;
+	int_to_signal[map_index] = "number of attachments";
+
+	// number of spring attachments
+	map_index++;
+	signal_to_int["number of spring attachments"] = map_index;
+	int_to_signal[map_index] = "number of spring attachments";
 	
 	// damage state 
 
@@ -524,7 +549,6 @@ void setup_signal_behavior_dictionaries( void )
 		behavior_to_int[temp] = map_index; 
 		int_to_behavior[map_index] = temp; 
 
-
 		// synonym 
 		temp = "transform to cell type " + std::to_string(pCD->type); 
 		behavior_to_int[temp] = map_index; 
@@ -534,11 +558,9 @@ void setup_signal_behavior_dictionaries( void )
 
 		temp = "transition to cell type " + std::to_string(pCD->type); 
 		behavior_to_int[temp] = map_index; 
+	}
 
-
-	}	
-
-	// asymmetic division
+	// asymmetric division (this remains necessary even with extended asym div because this item implicitly uses the current cell type name, meaning the index depends on the cell using this rule)
 	for( int i=0; i < n ; i++ )
 	{
 		map_index++;
@@ -546,6 +568,23 @@ void setup_signal_behavior_dictionaries( void )
 		std::string temp =  "asymmetric division to " + pCD->name;
 		behavior_to_int[temp] = map_index;
 		int_to_behavior[map_index] = temp;
+	}
+
+	// extended asym div
+	for( int i=0; i < n ; i++ )
+	{
+		for( int j=i; j < n ; j++ )
+		{
+			map_index++;
+			Cell_Definition* pCD1 = cell_definitions_by_type[i];
+			Cell_Definition* pCD2 = cell_definitions_by_type[j];
+			std::string signal_str =  "extended asymmetric division to " + pCD1->name + " and " + pCD2->name;
+			behavior_to_int[signal_str] = map_index;
+			signal_str =  "extended asymmetric division to " + pCD2->name + " and " + pCD1->name;
+			behavior_to_int[signal_str] = map_index;
+
+			int_to_behavior[map_index] = signal_str;
+		}
 	}
 
 	// custom behaviors
@@ -660,17 +699,8 @@ void display_signal_dictionary( std::ostream& os )
 void display_signal_dictionary( void )
 { display_signal_dictionary( std::cout); std::cout << std::endl; }
 
-
 void display_signal_dictionary_with_synonyms( void )
 { display_signal_dictionary_with_synonyms( std::cout ); }
-/*
-	std::cout << "Signals (with synonyms): " << std::endl 
-			  << "=======================" << std::endl; 
-	for( auto it = signal_to_int.begin() ; it != signal_to_int.end() ; it++ )
-	{ std::cout << it->second << " : " << it->first << std::endl; }
-	std::cout << std::endl << std::endl;  	
-    return; 
-*/
 
 void display_signal_dictionary_with_synonyms( std::ostream& os )
 {
@@ -711,14 +741,6 @@ void display_behavior_dictionary_with_synonyms( std::ostream& os )
 
 void display_behavior_dictionary_with_synonyms( void )
 { display_behavior_dictionary_with_synonyms( std::cout ); return; }
-/*
-	std::cout << "Behaviors (with synonyms): " << std::endl 
-			  << "=========================" << std::endl; 
-	for( auto it = behavior_to_int.begin() ; it != behavior_to_int.end() ; it++ )
-	{ std::cout << it->second << " : " << it->first << std::endl; }
-	std::cout << std::endl << std::endl;  	
-    return; 
-*/	
 
 int find_signal_index( std::string signal_name )
 {
@@ -726,9 +748,6 @@ int find_signal_index( std::string signal_name )
 	// safety first! 
 	if( search != signal_to_int.end() )
     { return search->second; }   
-
-	std::cout << "having trouble finding " << signal_name << std::endl; 
-
     return -1; 
 }
 
@@ -795,6 +814,14 @@ std::vector<double> get_signals( Cell* pCell )
 	for( int i=0; i < m ; i++ )
 	{ signals[start_substrate_grad_ind+i] = norm( pCell->nearest_gradient(i) ); }    
 
+	// current cycle phase
+	static int cycle_phase_ind = find_signal_index( "cycle phase" );
+	signals[cycle_phase_ind] = pCell->phenotype.cycle.data.current_phase_index;
+
+	// elapsed time in phase
+	static int cycle_phase_time = find_signal_index( "phase time" );
+	signals[cycle_phase_time] = pCell->phenotype.cycle.data.elapsed_time_in_phase;
+
 	// mechanical pressure 
 	static int pressure_ind = find_signal_index( "pressure"); 
 	signals[pressure_ind] = pCell->state.simple_pressure;
@@ -856,6 +883,14 @@ std::vector<double> get_signals( Cell* pCell )
 	// physical contact with basement membrane (not implemented) 
 	static int BM_contact_ind = find_signal_index( "contact with basement membrane"); 
 	signals[BM_contact_ind] = (int) pCell->state.contact_with_basement_membrane; 
+
+	// number of attachments
+	static int num_attachments_ind = find_signal_index( "number of attachments"); 
+	signals[num_attachments_ind] = pCell->state.attached_cells.size();
+
+	// number of spring attachments
+	static int num_spring_attachments_ind = find_signal_index( "number of spring attachments"); 
+	signals[num_spring_attachments_ind] = pCell->state.spring_attachments.size();
 
 	// damage
 	static int damage_ind = find_signal_index( "damage"); 
@@ -1044,6 +1079,24 @@ double get_single_signal( Cell* pCell, int index )
 		return out; 
 	}
 
+	// current cycle phase 
+	static int cycle_phase_ind = find_signal_index( "cycle phase" ); 
+	if( index == cycle_phase_ind )
+	{
+		out = pCell->phenotype.cycle.data.current_phase_index;
+		out /= signal_scales[index]; 
+		return out; 
+	}
+	
+	// elapsed time in phase
+	static int cycle_phase_time = find_signal_index( "phase time" ); 
+	if( index == cycle_phase_time )
+	{
+		out = pCell->phenotype.cycle.data.elapsed_time_in_phase;
+		out /= signal_scales[index]; 
+		return out; 
+	}
+
 	// mechanical pressure 
 	static int pressure_ind = find_signal_index( "pressure" ); 
 	if( index == pressure_ind )
@@ -1152,6 +1205,24 @@ double get_single_signal( Cell* pCell, int index )
 		out /= signal_scales[index]; 
 		return out; 
 	} 
+
+	// number of attachments
+	static int num_attachments_ind = find_signal_index( "number of attachments"); 
+	if( index == num_attachments_ind )
+	{
+		out = pCell->state.attached_cells.size(); 
+		out /= signal_scales[index]; 
+		return out;
+	}
+
+	// number of spring attachments
+	static int num_spring_attachments_ind = find_signal_index( "number of spring attachments"); 
+	if( index == num_spring_attachments_ind )
+	{
+		out = pCell->state.spring_attachments.size(); 
+		out /= signal_scales[index]; 
+		return out;
+	}
 
 	// damage
 	static int damage_ind = find_signal_index( "damage"); 
@@ -1417,9 +1488,18 @@ void set_behaviors( Cell* pCell , std::vector<double> parameters )
 
 	// asymmetric division
 	static int first_asymmetric_division_index = find_behavior_index( "asymmetric division to " + cell_definitions_by_type[0]->name );
-	std::copy(  parameters.begin()+first_asymmetric_division_index , 
-				parameters.begin()+first_asymmetric_division_index+n , 
-				pCell->phenotype.cycle.asymmetric_division.asymmetric_division_probabilities.begin() );
+	for ( int i = 0; i < n ; i++ )
+	{
+		pCell->phenotype.cycle.asymmetric_division.set_asymmetric_division_probability(pCell->type, i, parameters[i + first_asymmetric_division_index]);
+	}
+
+	// extended asym div
+	std::cout << "Warning: set_behaviors is overwriting values for standard asymmetric division with extended asymmetric division probabilities!" << std::endl;
+	static int first_extended_asymmetric_division_index = find_behavior_index( "extended asymmetric division to " + cell_definitions_by_type[0]->name + " and " + cell_definitions_by_type[0]->name );
+	for( int ind = 0; ind < (n + 1) * n / 2; ind++ )
+	{
+		pCell->phenotype.cycle.asymmetric_division.set_asymmetric_division_probability(ind, parameters[ind + first_extended_asymmetric_division_index]);
+	}
 
 	// custom behaviors
 	static int first_custom_ind = find_behavior_index( "custom 0"); 
@@ -1626,7 +1706,12 @@ void set_single_behavior( Cell* pCell, int index , double parameter )
 	// asymmetric division
 	static int first_asymmetric_division_index = find_behavior_index( "asymmetric division to " + cell_definitions_by_type[0]->name );
 	if( index >= first_asymmetric_division_index && index < first_asymmetric_division_index + n )
-	{ pCell->phenotype.cycle.asymmetric_division.asymmetric_division_probabilities[index-first_asymmetric_division_index] = parameter; return; }
+	{ pCell->phenotype.cycle.asymmetric_division.set_asymmetric_division_probability(pCell->type, index-first_asymmetric_division_index, parameter); return; }
+
+	// extended asym div
+	static int first_extended_asymmetric_division_index = find_behavior_index( "extended asymmetric division to " + cell_definitions_by_type[0]->name + " and " + cell_definitions_by_type[0]->name );
+	if( index >= first_extended_asymmetric_division_index && index < first_extended_asymmetric_division_index + n * (n + 1) / 2 )
+	{ pCell->phenotype.cycle.asymmetric_division.set_asymmetric_division_probability(index - first_extended_asymmetric_division_index, parameter); return; }
 
 	// custom behavior
 	static int first_custom_ind = find_behavior_index( "custom 0"); 
@@ -1837,9 +1922,17 @@ std::vector<double> get_behaviors( Cell* pCell )
 
 	// asymmetric division
 	static int first_asymmetric_division_index = find_behavior_index( "asymmetric division to " + cell_definitions_by_type[0]->name );
-	std::copy(  pCell->phenotype.cycle.asymmetric_division.asymmetric_division_probabilities.begin(), 
-				pCell->phenotype.cycle.asymmetric_division.asymmetric_division_probabilities.end(), 
-				parameters.begin()+first_asymmetric_division_index );
+	for ( int i = 0; i < n ; i++ )
+	{
+		parameters[i + first_asymmetric_division_index] = pCell->phenotype.cycle.asymmetric_division.asymmetric_division_probability(pCell->type, i);
+	}
+
+	// extended asym div
+	static int first_extended_asymmetric_division_index = find_behavior_index( "extended asymmetric division to " + cell_definitions_by_type[0]->name + " and " + cell_definitions_by_type[0]->name );
+	for( int ind = 0; ind < (n + 1) * n / 2; ind++ )
+	{
+		parameters[ind + first_extended_asymmetric_division_index] = pCell->phenotype.cycle.asymmetric_division.asymmetric_division_probability(ind);
+	}
 
 	// custom behavior
 	static int first_custom_ind = find_behavior_index( "custom 0"); 
@@ -2052,7 +2145,12 @@ double get_single_behavior( Cell* pCell , int index )
 	// asymmetric division
 	static int first_asymmetric_division_index = find_behavior_index( "asymmetric division to " + cell_definitions_by_type[0]->name );
 	if( index >= first_asymmetric_division_index && index < first_asymmetric_division_index+n )
-	{ return pCell->phenotype.cycle.asymmetric_division.asymmetric_division_probabilities[index-first_asymmetric_division_index]; }
+	{ return pCell->phenotype.cycle.asymmetric_division.asymmetric_division_probability(pCell->type, index-first_asymmetric_division_index); }
+
+	// extended asym div
+	static int first_extended_asymmetric_division_index = find_behavior_index( "extended asymmetric division to " + cell_definitions_by_type[0]->name + " and " + cell_definitions_by_type[0]->name );
+	if( index >= first_extended_asymmetric_division_index && index < first_extended_asymmetric_division_index + n * (n + 1) / 2 )
+	{ return pCell->phenotype.cycle.asymmetric_division.asymmetric_division_probability(index - first_extended_asymmetric_division_index); }
 
 	// custom behavior
 	static int first_custom_ind = find_behavior_index( "custom 0"); 
@@ -2293,9 +2391,17 @@ std::vector<double> get_base_behaviors( Cell* pCell )
 
 	// asymmetric division
 	static int first_asymmetric_division_index = find_behavior_index( "asymmetric division to " + cell_definitions_by_type[0]->name );
-	std::copy(  pCD->phenotype.cycle.asymmetric_division.asymmetric_division_probabilities.begin(), 
-				pCD->phenotype.cycle.asymmetric_division.asymmetric_division_probabilities.end(), 
-				parameters.begin()+first_asymmetric_division_index );
+	for ( int i = 0; i < n ; i++ )
+	{
+		parameters[i + first_asymmetric_division_index] = pCD->phenotype.cycle.asymmetric_division.asymmetric_division_probability(pCD->type, i);
+	}
+
+	// extended asym div
+	static int first_extended_asymmetric_division_index = find_behavior_index( "extended asymmetric division to " + cell_definitions_by_type[0]->name + " and " + cell_definitions_by_type[0]->name );
+	for( int ind = 0; ind < (n + 1) * n / 2; ind++ )
+	{
+		parameters[ind + first_extended_asymmetric_division_index] = pCell->phenotype.cycle.asymmetric_division.asymmetric_division_probability(ind);
+	}
 
 	// custom behavior
 	static int first_custom_ind = find_behavior_index( "custom 0"); 
@@ -2511,7 +2617,12 @@ double get_single_base_behavior( Cell* pCell , int index )
 	// asymmetric division
 	static int first_asymmetric_division_index = find_behavior_index( "asymmetric division to " + cell_definitions_by_type[0]->name );
 	if( index >= first_asymmetric_division_index && index < first_asymmetric_division_index + n )
-	{ return pCD->phenotype.cycle.asymmetric_division.asymmetric_division_probabilities[index-first_asymmetric_division_index]; }
+	{ return pCD->phenotype.cycle.asymmetric_division.asymmetric_division_probability(pCell->type, index-first_asymmetric_division_index); }
+
+	// extended asym div
+	static int first_extended_asymmetric_division_index = find_behavior_index( "extended asymmetric division to " + cell_definitions_by_type[0]->name + " and " + cell_definitions_by_type[0]->name );
+	if( index >= first_extended_asymmetric_division_index && index < first_extended_asymmetric_division_index + n * (n + 1) / 2 )
+	{ return pCD->phenotype.cycle.asymmetric_division.asymmetric_division_probability(index - first_extended_asymmetric_division_index); }
 
 	// custom behavior
 	static int first_custom_ind = find_behavior_index( "custom 0"); 
@@ -2733,7 +2844,12 @@ double get_single_base_behavior( Cell_Definition* pCD , int index )
 	// asymmetric division
 	static int first_asymmetric_division_index = find_behavior_index( "asymmetric division to " + cell_definitions_by_type[0]->name );
 	if( index >= first_asymmetric_division_index && index < first_asymmetric_division_index + n )
-	{ return pCD->phenotype.cycle.asymmetric_division.asymmetric_division_probabilities[index-first_asymmetric_division_index]; }
+	{ return pCD->phenotype.cycle.asymmetric_division.asymmetric_division_probability(pCD->type, index-first_asymmetric_division_index); }
+
+	// extended asym div
+	static int first_extended_asymmetric_division_index = find_behavior_index( "extended asymmetric division to " + cell_definitions_by_type[0]->name + " and " + cell_definitions_by_type[0]->name );
+	if( index >= first_extended_asymmetric_division_index && index < first_extended_asymmetric_division_index + n * (n + 1) / 2 )
+	{ return pCD->phenotype.cycle.asymmetric_division.asymmetric_division_probability(index - first_extended_asymmetric_division_index); }
 
 	// custom behavior
 	static int first_custom_ind = find_behavior_index( "custom 0"); 
@@ -2816,5 +2932,4 @@ std::vector<double> get_base_behaviors( Cell* pCell , std::vector<std::string> n
 	{ parameters[n] = get_single_base_behavior(pCell,names[n]); }
 	return parameters; 
 }
-
 };
