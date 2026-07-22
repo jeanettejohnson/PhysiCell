@@ -171,7 +171,7 @@
             <calculate_gradients>true</calculate_gradients>
             <track_internalized_substrates_in_each_agent>false</track_internalized_substrates_in_each_agent>
             <initial_condition type="csv" enabled="true">
-                <filename>/Users/jeanette.johnson/PDACAntigenPresentationABMs/PhysiCell/user_projects/antigen_presentation/config/ics/substrates/JHH387ROI3_ecm_scaled.csv</filename>
+                <filename>user_projects/antigen_presentation/config/ics/substrates/JHH387ROI3_ecm_scaled.csv</filename>
             </initial_condition>
             <dirichlet_nodes type="matlab" enabled="false">
                 <filename>./config/dirichlet.mat</filename>
@@ -6230,7 +6230,7 @@
 
     <initial_conditions>
         <cell_positions type="csv" enabled="true">
-            <folder>/Users/jeanette.johnson/PDACAntigenPresentationABMs/PhysiCell/config/ics/JHH_IMC</folder>
+            <folder>config/ics/JHH_IMC</folder>
             <filename>JHH387ROI3.csv</filename>
         </cell_positions>
     </initial_conditions>
@@ -6238,7 +6238,7 @@
     <cell_rules>
         <rulesets>
             <ruleset protocol="CBHG" version="3.0" format="csv" enabled="true">
-                <folder>/Users/jeanette.johnson/PDACAntigenPresentationABMs/PhysiCell/config</folder>
+                <folder>user_projects/antigen_presentation/config</folder>
                 <filename>cell_rules.csv</filename>
             </ruleset>
         </rulesets>
