@@ -14,6 +14,14 @@ pmb_debug.log
 studio_debug.log
 user_projects/*
 !user_projects/empty.txt
+# Upstream ignores all of user_projects/ because it is scratch space there. In
+# this fork these two ARE the source of truth, so re-include them -- otherwise
+# `git add user_projects/antigen_presentation` is refused and the whole tree has
+# to be force-added, which is how 9 .DS_Store files got committed past the rule
+# on line 3. Negating the directories lets git descend; the general rules above
+# (.DS_Store, *.o, ...) still apply to their contents.
+!user_projects/antigen_presentation/
+!user_projects/antigen_presentation_htan_singlecell/
 
 project*
 Studio.zip
