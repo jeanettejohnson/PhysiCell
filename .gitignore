@@ -49,3 +49,17 @@ Studio.zip
 /unit_tests
 /test_custom_DCs
 /test_voxel_values
+
+# Runtime artifact: display_citations() writes this into the working directory
+# on every run, and PCMM runs simulations with --chdir=PhysiCell, so it
+# reappears at the repo root constantly.
+#
+# Anchored to the root deliberately -- an unanchored pattern would also cover
+# the copies committed under sample_projects_intracellular/, which are kept.
+/ALL_CITATIONS.txt
+
+# 'make load' copies the active user project up to the repo root. These are
+# build artifacts, byte-identical to the user_projects/ originals which are the
+# real source.
+/main.cpp
+/custom_modules/
