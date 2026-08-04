@@ -67,6 +67,8 @@
 
 #include "./custom.h"
 
+#include <map>
+
 void create_cell_types(void)
 {
 	// set the random seed 
@@ -116,7 +118,7 @@ void create_cell_types(void)
 	   Cell rule definitions
 	*/
 
-	setup_cell_rules();
+	setup_behavior_rules();
 
 	/*
 	   Put any modifications to individual cell definitions here.
@@ -156,7 +158,9 @@ void setup_tissue()
 {
 	setup_tissue_domain();
 	// load cells from your CSV file (if enabled)
-	load_cells_from_pugixml();
+	// load_initial_cells() honors a -i path when PCMM passes one, and otherwise
+	// falls through to the config's <cell_positions> block.
+	load_initial_cells();
 
 	return;
 }
@@ -182,9 +186,71 @@ void setup_tissue_domain(void)
 	double Zrange = Zmax - Zmin;
 }
 
+// Model-specific SVG palette, keyed by cell type NAME.
+//
+// This lives here rather than in modules/PhysiCell_pathology.cpp deliberately.
+// The palette was originally applied there (commit 124a30be, "colors") and was
+// silently destroyed when the drbergman 1.14.2 merge rewrote
+// paint_by_number_cell_coloring(). user_projects/ is ours alone, so upstream
+// merges cannot clobber it.
+//
+// Keyed by name, not index, so reordering or adding a <cell_definition> cannot
+// silently shift every color. This model has no duct_filler; that entry is kept
+// so the table stays byte-identical to the antigen_presentation copy, and
+// unlisted names fall back to the engine default.
+//
+// Keep in sync with PhysiCell-Studio/bin/cmaps.py (paint_clist) and the copies
+// under data/inputs/custom_codes/. tools/check_cell_colors.py verifies this.
+static const std::map<std::string, std::string> kCellTypeColors = {
+	{"epithelial_normal", "palegreen"},
+	{"mesenchymal_normal", "lightcyan"},
+	{"CAF", "yellow"},
+	{"epithelial_tumor", "green"},
+	{"mesenchymal_tumor", "blue"},
+	{"other_tissue", "magenta"},
+	{"CD4_Tcell", "darkorange"},
+	{"CD8_Tcell", "maroon"},
+	{"Treg", "plum"},
+	{"CD8_exhausted", "lightcoral"},
+	{"B cell", "papayawhip"},
+	{"macrophage", "lightpink"},
+	{"epithelial_tumor_class1", "chartreuse"},
+	{"epithelial_tumor_class1_class2", "darkolivegreen"},
+	{"epithelial_tumor_class2", "seagreen"},
+	{"mesenchymal_tumor_class1", "lightskyblue"},
+	{"mesenchymal_tumor_class1_class2", "dodgerblue"},
+	{"mesenchymal_tumor_class2", "royalblue"},
+	{"apCAF", "grey"},
+	{"PDAC_unclassified", "white"},
+	{"duct_filler", "tan"}};
+
 std::vector<std::string> my_coloring_function(Cell *pCell)
 {
-	return paint_by_number_cell_coloring(pCell);
+	auto it = kCellTypeColors.find(pCell->type_name);
+	if (it == kCellTypeColors.end())
+	{
+		// Unknown type: defer to the engine rather than guessing.
+		return paint_by_number_cell_coloring(pCell);
+	}
+
+	std::string interior_color = it->second;
+
+	// Preserve the engine's death-state semantics -- without this, dead cells
+	// would render in their live color. Mirrors paint_by_number_cell_coloring().
+	int phase_code = pCell->phenotype.cycle.current_phase().code;
+	if (phase_code == PhysiCell_constants::necrotic_swelling ||
+		phase_code == PhysiCell_constants::necrotic_lysed ||
+		phase_code == PhysiCell_constants::necrotic)
+	{
+		interior_color = "saddlebrown";
+	}
+	if (phase_code == PhysiCell_constants::apoptotic)
+	{
+		interior_color = "black";
+	}
+
+	// {cytoplasm fill, cytoplasm outline, nucleus fill, nucleus outline}
+	return {interior_color, "black", interior_color, interior_color};
 }
 
 void phenotype_function(Cell *pCell, Phenotype &phenotype, double dt)
